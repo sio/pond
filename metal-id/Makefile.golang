@@ -1,0 +1,121 @@
+GO?=go
+EVERYTHING=./...
+
+GOTEST_TIMEOUT?=15s
+GOBENCH_TARGET?=.
+GOBENCH_TIME?=2s
+GOBENCH_COUNT?=3
+
+APPS?=$(patsubst $(CMD_DIR)/%/.,%,$(wildcard $(CMD_DIR)/*/.))
+EXE=$(patsubst %,$(BIN_DIR)/%$(BIN_SUFFIX),$(APPS))
+CMD_DIR?=./cmd
+BIN_DIR?=bin
+BIN_SUFFIX?=--$(GOOS)-$(GOARCH)$(GOEXE)
+
+GOARCH:=$(shell $(GO) env GOARCH)
+GOEXE:=$(shell $(GO) env GOEXE)
+GOOS:=$(shell $(GO) env GOOS)
+GOPATH:=$(shell $(GO) env GOPATH)
+
+.PHONY: build
+build: $(EXE)  ## compile all binaries
+$(EXE): $(shell find . -type f -iname '*.go') go.sum
+	$(GO) build -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
+
+.PHONY: $(RUNNERS)
+RUNNERS=$(patsubst %,run-%,$(APPS))
+$(RUNNERS): $(EXE)  ## run binaries
+	$(patsubst run-%,$(BIN_DIR)/%$(BIN_SUFFIX),$@) $(ARGS)
+
+.PHONY: build-all
+build-all:  ## build all OS/architectures
+	GOOS=linux   GOARCH=amd64 $(MAKE) build
+	GOOS=linux   GOARCH=arm64 $(MAKE) build
+	GOOS=windows GOARCH=amd64 $(MAKE) build
+	GOOS=windows GOARCH=arm64 $(MAKE) build
+	GOOS=darwin  GOARCH=amd64 $(MAKE) build
+	GOOS=darwin  GOARCH=arm64 $(MAKE) build
+
+.PHONY: fmt
+fmt:  ## format Go code
+	$(GO) fmt $(EVERYTHING)
+
+go.sum:
+	$(GO) mod tidy
+	touch $@
+
+.PHONY: test test-verbose
+test:  ## run automated tests
+test-verbose:  ## run tests with increased verbosity
+test-verbose: GOTEST_ARGS+=-v --count=1
+test test-verbose: go.sum
+	$(GO) test $(EVERYTHING) -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
+
+.PHONY: bench
+bench:  ## run benchmarks
+	$(GO) test \
+		-bench=$(GOBENCH_TARGET) \
+		-benchmem \
+		-benchtime=$(GOBENCH_TIME) \
+		-count=$(GOBENCH_COUNT) \
+		-run='^#'
+
+STATICCHECK=$(GOPATH)/bin/staticcheck$(GOEXE)
+$(STATICCHECK):
+	$(GO) install honnef.co/go/tools/cmd/staticcheck@latest
+
+ERRCHECK=$(GOPATH)/bin/errcheck$(GOEXE)
+$(ERRCHECK):
+	$(GO) install github.com/kisielk/errcheck@latest
+
+.PHONY: lint
+lint: $(STATICCHECK) $(ERRCHECK)
+lint:  ## run linters
+	$(GO) fmt $(EVERYTHING)
+	$(GO) vet $(EVERYTHING)
+	$(STATICCHECK) $(EVERYTHING)
+	$(ERRCHECK) $(EVERYTHING)
+
+DELVE=$(GOPATH)/bin/dlv$(GOEXE)
+$(DELVE):
+	$(GO) install github.com/go-delve/delve/cmd/dlv@latest
+
+.PHONY: debug-core
+debug-core: CORE?=core.$(PID)
+debug-core: EXE?=$(shell readlink /proc/$(PID)/exe)
+debug-core: $(DELVE)  ## dump and debug process memory
+	@test "$(CORE)" != "core." || { echo 'Variable not defined: PID'; exit 1; }
+	@test -n "$(EXE)" || { echo 'Variable not defined: EXE'; exit 1; }
+	@test -f "$(CORE)" || gcore -o core $(PID)
+	$(DELVE) core "$(EXE)" "$(CORE)"
+
+CLOC=$(GOPATH)/bin/gocloc$(GOEXE)
+$(CLOC):
+	$(GO) install github.com/hhatto/gocloc/cmd/gocloc@latest
+
+.PHONY: loc
+loc: $(CLOC)  ## count lines of code
+	$(CLOC) .
+
+.PHONY: help
+help:  ## show help message
+	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST)) | column -t -s '	'
+
+define HELP_AWK
+/  ##/ {
+	if (stop) exit;
+
+	match($$0, /^[^:]+:/);
+	target = substr($$0, RSTART, RLENGTH-1);
+	gsub(" ", ",", target);
+
+	match($$0, /  ## /);
+	help = substr($$0, RSTART + RLENGTH);
+
+	printf("%s\t%s\n", target, help);
+}
+/HELP_AWK/ {
+	stop = 1;
+}
+endef
+export HELP_AWK
