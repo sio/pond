@@ -11,7 +11,18 @@ type DataSource interface {
 	Next() []byte
 }
 
+type annotatedDataSource struct {
+	Name string
+	Data DataSource
+}
+
+func (ds *annotatedDataSource) Next() []byte {
+	return ds.Data.Next()
+}
+
 // Order of data sources matters. Increment idVersion after any changes
-func Sources() []DataSource {
-	return []DataSource{}
+func Sources() []*annotatedDataSource {
+	return []*annotatedDataSource{
+		{"Network interfaces", &NetworkInterfacesData{}},
+	}
 }

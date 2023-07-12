@@ -13,14 +13,15 @@ func main() {
 	var hwid = metal_id.New()
 
 	var err error
-	var data metal_id.DataSource
-	for _, data = range metal_id.Sources() {
+	for _, data := range metal_id.Sources() {
+		stderr("Reading from %s", data.Name)
 		for {
 			var chunk []byte
 			chunk = data.Next()
 			if len(chunk) == 0 {
 				break
 			}
+			stderr(string(chunk))
 			_, err = hwid.Write(chunk)
 			if err != nil {
 				fail("Failed to add data to fingerprint: %v", err)
@@ -42,7 +43,7 @@ func main() {
 	fmt.Println(string(output))
 }
 
-func fail(format string, a ...any) {
+func stderr(format string, a ...any) {
 	if !strings.HasSuffix(format, "\n") {
 		format += "\n"
 	}
@@ -50,5 +51,9 @@ func fail(format string, a ...any) {
 	if err != nil {
 		panic("failed to write to stderr: " + fmt.Sprint(err))
 	}
+}
+
+func fail(format string, a ...any) {
+	stderr(format, a...)
 	os.Exit(1)
 }
