@@ -2,50 +2,56 @@ package metal_id
 
 import (
 	"bytes"
-	"errors"
-	"log"
 	"os"
 	"path/filepath"
 )
 
-type NetworkInterfacesData struct {
+type BlockDeviceData struct {
 	abstractDataSource
 }
 
-func (d *NetworkInterfacesData) Next() []byte {
+func (d *BlockDeviceData) Next() []byte {
 	if d.IsEmpty() {
 		d.fill()
 	}
 	return d.abstractDataSource.Next()
 }
 
-func (d *NetworkInterfacesData) fill() {
-	const sysfs = "/sys/class/net"
+func (d *BlockDeviceData) fill() {
+	const sysfs = "/sys/block"
 	subdirs, _ := os.ReadDir(sysfs)
 	for _, dir := range subdirs {
 		path := filepath.Join(sysfs, dir.Name())
 		if !isDir(path) {
 			continue
 		}
-		nic, err := readNIC(path)
-		if errors.Is(err, errNotPhysicalDevice) {
-			continue
-		}
+		device, err := aboutBlockDevice(path)
 		if err != nil {
-			log.Printf("failed to gather data from %s: %v", path, err)
 			continue
 		}
-		d.Append(nic)
+		d.Append(device)
+		disk, err := os.Open(filepath.Join("/dev", dir.Name()))
+		if err != nil {
+			continue
+		}
+		lba0 := make([]byte, 512)
+		n, err := disk.Read(lba0)
+		if err != nil {
+			continue
+		}
+		lba0 = lba0[:n]
+		d.Append(lba0)
 	}
 }
 
-func readNIC(path string) ([]byte, error) {
+func aboutBlockDevice(path string) ([]byte, error) {
 	var endpoints = []string{
 		"device/vendor",
 		"device/device",
-		"address",
+		"size",
+		"serial",
 	}
-	nic := make([][]byte, len(endpoints))
+	device := make([][]byte, len(endpoints))
 	for index, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(path, endpoint))
 		if os.IsNotExist(err) {
@@ -54,9 +60,7 @@ func readNIC(path string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		nic[index] = content
+		device[index] = content
 	}
-	return bytes.Join(nic, nil), nil
+	return bytes.Join(device, nil), nil
 }
-
-var errNotPhysicalDevice = errors.New("not a physical device")
