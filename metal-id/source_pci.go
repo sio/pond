@@ -2,6 +2,7 @@ package metal_id
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -53,5 +54,59 @@ func readPCI(path string) ([]byte, error) {
 		}
 		device[index] = content
 	}
+	rom := readROM(path)
+	if len(rom) > 0 {
+		device = append(device, rom)
+	}
 	return bytes.Join(device, nil), nil
+}
+
+// Read PCI ROM if available
+// https://mjmwired.net/kernel/Documentation/filesystems/sysfs-pci.txt
+func readROM(path string) []byte {
+	romPath := filepath.Join(path, "rom")
+	var stat os.FileInfo
+	var err error
+	if stat, err = os.Stat(romPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	rom, err := os.OpenFile(romPath, os.O_RDWR, 0)
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = rom.Close() }()
+
+	_, err = fmt.Fprintln(rom, "1")
+	if err != nil {
+		return nil
+	}
+	defer func() {
+		// Simply writing into previously opened descriptor
+		// does not disable ROM reading, so we close it and reopen
+		_ = rom.Close()
+		rom, _ = os.OpenFile(romPath, os.O_RDWR, 0)
+		_, _ = fmt.Fprintln(rom, "0")
+		_ = rom.Close()
+	}()
+
+	const chunkSize int = 1024
+
+	// First bytes are boring. Let's skip those
+	var romSize = int(stat.Size())
+	var skip = 0
+	if romSize > 3*chunkSize {
+		skip = ((romSize / chunkSize) % chunkSize) + (romSize % chunkSize) + chunkSize
+	}
+	_, err = rom.Seek(int64(skip), 1)
+	if err != nil {
+		return nil
+	}
+
+	var output = make([]byte, chunkSize) // we don't need full ROM
+	n, err := rom.Read(output)
+	if err != nil {
+		return nil
+	}
+	return output[:n]
 }
