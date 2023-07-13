@@ -52,6 +52,10 @@ func aboutBlockDevice(path string) ([]byte, error) {
 		"size",
 		"serial",
 	}
+	_, err := os.Stat(filepath.Join(path, "device"))
+	if os.IsNotExist(err) {
+		return nil, errNotPhysicalDevice
+	}
 	device := make([][]byte, 0, len(endpoints))
 	for _, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(path, endpoint))
