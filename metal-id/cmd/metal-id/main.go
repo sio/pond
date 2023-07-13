@@ -22,7 +22,7 @@ func main() {
 			if len(chunk) == 0 {
 				break
 			}
-			stderr(previewSeedData(chunk))
+			stderr("  %s", previewSeedData(chunk))
 			_, err = hwid.Write(chunk)
 			if err != nil {
 				fail("Failed to add data to fingerprint: %v", err)

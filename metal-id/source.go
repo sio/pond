@@ -11,6 +11,7 @@ import (
 func Sources() []*annotatedDataSource {
 	return []*annotatedDataSource{
 		{"Network interfaces", &NetworkInterfacesData{}},
+		{"PCI devices", &PciDeviceData{}},
 	}
 }
 
@@ -50,6 +51,9 @@ func (d *abstractDataSource) IsEmpty() bool {
 }
 
 func (d *abstractDataSource) Append(c []byte) {
+	if len(c) == 0 {
+		return
+	}
 	d.chunks = append(d.chunks, c)
 }
 
@@ -71,7 +75,7 @@ func (d *abstractDataSource) Next() []byte {
 }
 
 func (d *abstractDataSource) sort() {
-	if len(d.chunks) != 0 {
+	if len(d.chunks) == 0 {
 		return
 	}
 	sort.SliceStable(
