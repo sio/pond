@@ -3,6 +3,7 @@ package metal_id
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -47,11 +48,17 @@ func (d *NetworkInterfacesData) Next() []byte {
 func (d *NetworkInterfacesData) Fill() {
 	subdirs, _ := os.ReadDir(sysfs)
 	for _, dir := range subdirs {
-		if !dir.IsDir() {
+		// The following if statement is ignoring best practices on purpose because:
+		// - dir.IsDir() does not consider symlinks to directories to be directories
+		// - filepath.Join() loses typically meaningless but important for us "/." at the end of path
+		if _, err := os.Stat(fmt.Sprintf("%s/%s/.", sysfs, dir.Name())); os.IsNotExist(err) {
 			continue
 		}
 		nic, err := readNIC(dir.Name())
-		if err != nil && !errors.Is(err, errNotPhysicalNIC) {
+		if errors.Is(err, errNotPhysicalNIC) {
+			continue
+		}
+		if err != nil {
 			log.Printf("failed to gather data from %s: %v", dir.Name(), err)
 			continue
 		}
