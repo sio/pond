@@ -2,61 +2,58 @@ package metal_id
 
 import (
 	"bytes"
-	"errors"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-type NetworkInterfacesData struct {
+type UsbDeviceData struct {
 	abstractDataSource
 }
 
-func (d *NetworkInterfacesData) Next() []byte {
+func (d *UsbDeviceData) Next() []byte {
 	if d.IsEmpty() {
 		d.fill()
 	}
 	return d.abstractDataSource.Next()
 }
 
-func (d *NetworkInterfacesData) fill() {
-	const sysfs = "/sys/class/net"
+func (d *UsbDeviceData) fill() {
+	const sysfs = "/sys/bus/usb/devices"
+
 	subdirs, _ := os.ReadDir(sysfs)
 	for _, dir := range subdirs {
 		path := filepath.Join(sysfs, dir.Name())
 		if !isDir(path) {
 			continue
 		}
-		nic, err := readNIC(path)
-		if errors.Is(err, errNotPhysicalNIC) {
-			continue
-		}
+		usb, err := readUSB(path)
 		if err != nil {
 			log.Printf("failed to gather data from %s: %v", path, err)
 			continue
 		}
-		d.Append(nic)
+		d.Append(usb)
 	}
 }
 
-func readNIC(path string) ([]byte, error) {
+func readUSB(path string) ([]byte, error) {
 	var endpoints = []string{
-		"device/vendor",
-		"device/device",
-		"address",
+		"idVendor",
+		"idProduct",
+		"version",
+		"serial",
+		"product",
 	}
-	nic := make([][]byte, len(endpoints))
+	device := make([][]byte, len(endpoints))
 	for index, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(path, endpoint))
 		if os.IsNotExist(err) {
-			return nil, errNotPhysicalNIC
+			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		nic[index] = content
+		device[index] = content
 	}
-	return bytes.Join(nic, nil), nil
+	return bytes.Join(device, nil), nil
 }
-
-var errNotPhysicalNIC = errors.New("not a physical network controller")

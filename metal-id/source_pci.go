@@ -45,6 +45,9 @@ func readPCI(path string) ([]byte, error) {
 	device := make([][]byte, len(endpoints))
 	for index, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(path, endpoint))
+		if os.IsNotExist(err) {
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
