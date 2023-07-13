@@ -13,6 +13,7 @@ func Sources() []*annotatedDataSource {
 		{"Network interfaces", &NetworkInterfacesData{}},
 		{"PCI devices", &PciDeviceData{}},
 		{"USB devices", &UsbDeviceData{}},
+		{"DMI table", &DMIData{}},
 	}
 }
 
