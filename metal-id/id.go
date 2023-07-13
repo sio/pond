@@ -4,21 +4,23 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ed25519"
-	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"hash"
+
+	"golang.org/x/crypto/argon2"
 )
 
 const (
 	idVersion         uint = 1
 	idHeaderRepeat    int  = 16
 	dataPointMinBytes int  = 8
-	dataPointMinCount uint = 4 // 4 data points * 8 bytes minimum * 8 bit = 256 bit minimum entropy
+	dataPointMinCount uint = 8 // 8 data points * 8 bytes minimum * 8 bit = 512 bit minimum entropy
 )
 
 // Initialize new MetalID
 func New() *MetalID {
-	h := sha256.New()
+	h := sha512.New()
 	_, err := h.Write(
 		bytes.Repeat(
 			[]byte(fmt.Sprintf("METAL-ID VERSION %d", idVersion)),
@@ -55,11 +57,10 @@ func (id *MetalID) Key() (crypto.Signer, error) {
 	if id.count < dataPointMinCount {
 		return nil, fmt.Errorf("not enough data points (want %d, have %d)", dataPointMinCount, id.count)
 	}
-
-	// Prevent ed25519.NewKeyFromSeed from panicking
-	if id.hash.Size() < ed25519.SeedSize {
-		return nil, fmt.Errorf("hash sum is too short for key derivation (want %d, have %d bytes)", ed25519.SeedSize, id.hash.Size())
+	if id.hash.Size() < 16+16 {
+		return nil, fmt.Errorf("hash sum is too short for safe key derivation")
 	}
-
-	return ed25519.NewKeyFromSeed(id.hash.Sum(nil)[:ed25519.SeedSize]), nil
+	fingerprint := id.hash.Sum(nil)
+	seed := argon2.IDKey(fingerprint[16:], fingerprint[:16], 4, 256*1024, 2, ed25519.SeedSize)
+	return ed25519.NewKeyFromSeed(seed), nil
 }
