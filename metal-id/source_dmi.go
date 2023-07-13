@@ -51,4 +51,14 @@ func (d *DMIData) fill() {
 		}
 		d.Append(content)
 	}
+	for _, firmware := range []string{
+		"/sys/firmware/dmi/tables/DMI",
+		"/sys/firmware/dmi/tables/smbios_entry_point",
+	} {
+		content, err := os.ReadFile(firmware)
+		if err != nil {
+			continue
+		}
+		d.Append(content)
+	}
 }
