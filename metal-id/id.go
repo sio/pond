@@ -61,6 +61,15 @@ func (id *MetalID) Key() (crypto.Signer, error) {
 		return nil, fmt.Errorf("hash sum is too short for safe key derivation")
 	}
 	fingerprint := id.hash.Sum(nil)
+
+	// Argon2 parameter selection logic:
+	//   time=4
+	//     We are not in a hurry. This key will typically be generated once per boot.
+	//   memory=256MB
+	//     We are not targeting embedded devices, and pretty much any server
+	//     should have 256MB free early after boot.
+	//   threads=2
+	//     We target cheap old hardware. Extremely multicore CPUs are not guaranteed.
 	seed := argon2.IDKey(fingerprint[16:], fingerprint[:16], 4, 256*1024, 2, ed25519.SeedSize)
 	return ed25519.NewKeyFromSeed(seed), nil
 }
