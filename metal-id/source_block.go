@@ -48,19 +48,20 @@ func aboutBlockDevice(path string) ([]byte, error) {
 	var endpoints = []string{
 		"device/vendor",
 		"device/device",
+		"device/model",
 		"size",
 		"serial",
 	}
-	device := make([][]byte, len(endpoints))
-	for index, endpoint := range endpoints {
+	device := make([][]byte, 0, len(endpoints))
+	for _, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(path, endpoint))
-		if os.IsNotExist(err) {
-			return nil, errNotPhysicalDevice
-		}
 		if err != nil {
-			return nil, err
+			continue
 		}
-		device[index] = content
+		if len(content) <= 2 { // meaningless '\n' and '0\n'
+			continue
+		}
+		device = append(device, content)
 	}
 	return bytes.Join(device, nil), nil
 }
