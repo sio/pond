@@ -22,10 +22,10 @@ func readNIC(ifname string) ([]byte, error) {
 	nic := make([][]byte, len(endpoints))
 	for index, endpoint := range endpoints {
 		content, err := os.ReadFile(filepath.Join(sysfs, ifname, endpoint))
+		if os.IsNotExist(err) {
+			return nil, errNotPhysicalNIC
+		}
 		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, errNotPhysicalNIC
-			}
 			return nil, err
 		}
 		nic[index] = content
