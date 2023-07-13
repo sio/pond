@@ -46,7 +46,7 @@ type abstractDataSource struct {
 }
 
 func (d *abstractDataSource) IsEmpty() bool {
-	return len(d.chunks) > 0
+	return len(d.chunks) == 0
 }
 
 func (d *abstractDataSource) Append(c []byte) {
