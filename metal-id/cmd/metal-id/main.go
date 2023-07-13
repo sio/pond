@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 			if len(chunk) == 0 {
 				break
 			}
-			stderr(string(chunk))
+			stderr(previewSeedData(chunk))
 			_, err = hwid.Write(chunk)
 			if err != nil {
 				fail("Failed to add data to fingerprint: %v", err)
@@ -56,4 +57,24 @@ func stderr(format string, a ...any) {
 func fail(format string, a ...any) {
 	stderr(format, a...)
 	os.Exit(1)
+}
+
+func previewSeedData(data []byte) string {
+	const (
+		maxPreviewLength = 80 - 8 - 10
+		nonPrintableByte = '.'
+	)
+	var builder strings.Builder
+	for index, b := range data {
+		if index > maxPreviewLength {
+			break
+		}
+		var char = rune(b)
+		if !unicode.IsPrint(char) {
+			char = nonPrintableByte
+		}
+		builder.WriteRune(char)
+	}
+	builder.WriteString(fmt.Sprintf(" [%d bytes]", len(data)))
+	return builder.String()
 }
