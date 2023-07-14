@@ -15,7 +15,7 @@ func main() {
 
 	var err error
 	for _, data := range metal_id.Sources() {
-		stderr("Reading from %s", data.Name)
+		stderr("Reading %s", data.Name)
 		for {
 			var chunk []byte
 			chunk = data.Next()
