@@ -1,6 +1,7 @@
 GO?=go
 EVERYTHING=./...
 
+GOBUILD_ARGS?=-ldflags="-s -w"
 GOTEST_TIMEOUT?=15s
 GOBENCH_TARGET?=.
 GOBENCH_TIME?=2s
@@ -20,7 +21,7 @@ GOPATH:=$(shell $(GO) env GOPATH)
 .PHONY: build
 build: $(EXE)  ## compile all binaries
 $(EXE): $(shell find . -type f -iname '*.go') go.sum
-	$(GO) build -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
+	$(GO) build $(GOBUILD_ARGS) -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
 
 .PHONY: $(RUNNERS)
 RUNNERS=$(patsubst %,run-%,$(APPS))
