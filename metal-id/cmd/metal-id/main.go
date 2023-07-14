@@ -74,7 +74,7 @@ func main() {
 	if len(*dest) == 0 {
 		return
 	}
-	err = os.WriteFile(*dest+".pub", output, 0600)
+	err = os.WriteFile(*dest+".pub", output, 0644)
 	if err != nil {
 		fail("Failed to save public key: %v", err)
 	}
