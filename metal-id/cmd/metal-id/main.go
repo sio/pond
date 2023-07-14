@@ -45,8 +45,7 @@ func main() {
 	for _, data := range metal_id.Sources() {
 		debug("Reading %s", data.Name)
 		for {
-			var chunk []byte
-			chunk = data.Next()
+			chunk := data.Next()
 			if len(chunk) == 0 {
 				break
 			}
