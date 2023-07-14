@@ -2,7 +2,6 @@ package metal_id
 
 import (
 	"bytes"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -29,7 +28,6 @@ func (d *UsbDeviceData) fill() {
 		}
 		usb, err := readUSB(path)
 		if err != nil {
-			log.Printf("failed to gather data from %s: %v", path, err)
 			continue
 		}
 		d.Append(usb)

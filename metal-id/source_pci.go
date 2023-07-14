@@ -3,7 +3,6 @@ package metal_id
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -30,7 +29,6 @@ func (d *PciDeviceData) fill() {
 		}
 		pci, err := readPCI(path)
 		if err != nil {
-			log.Printf("failed to gather data from %s: %v", path, err)
 			continue
 		}
 		d.Append(pci)

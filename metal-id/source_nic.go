@@ -3,7 +3,6 @@ package metal_id
 import (
 	"bytes"
 	"errors"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -28,11 +27,7 @@ func (d *NetworkInterfacesData) fill() {
 			continue
 		}
 		nic, err := readNIC(path)
-		if errors.Is(err, errNotPhysicalDevice) {
-			continue
-		}
 		if err != nil {
-			log.Printf("failed to gather data from %s: %v", path, err)
 			continue
 		}
 		d.Append(nic)
