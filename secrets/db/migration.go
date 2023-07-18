@@ -26,7 +26,6 @@ func applyAllMigrations(db *sql.DB) error {
 	}
 	for _, migration := range entries[start:] {
 		name := migration.Name()
-		fmt.Println("Preparing migration:", name)
 		code, err := schema.ReadFile(fmt.Sprintf("schema/%s", name))
 		if err != nil {
 			return fmt.Errorf("failed to read embedded file: %w", err)
@@ -40,7 +39,6 @@ func applyAllMigrations(db *sql.DB) error {
 }
 
 func applyMigration(db *sql.DB, name, code string) (err error) {
-	fmt.Println("Applying migration:", name)
 	tx, err := db.Begin()
 	if err != nil {
 		return err
