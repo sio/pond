@@ -46,8 +46,10 @@ CREATE TABLE IF NOT EXISTS access(
     -- Reference to user group
     usergroup TEXT NOT NULL,
 
-    -- Permissions bitmask
-    permissions INTEGER,
+    -- Permissions
+    allow_get    BOOLEAN NOT NULL DEFAULT FALSE,
+    allow_set    BOOLEAN NOT NULL DEFAULT FALSE,
+    allow_delete BOOLEAN NOT NULL DEFAULT FALSE,
 
     -- Constraints
     PRIMARY KEY (access, usergroup)
@@ -62,8 +64,8 @@ CREATE TABLE IF NOT EXISTS usergroup(
 );
 CREATE TABLE IF NOT EXISTS user(
     user TEXT NOT NULL PRIMARY KEY,
-    admin BOOLEAN DEFAULT FALSE,
-    disabled BOOLEAN DEFAULT FALSE
+    admin BOOLEAN NOT NULL DEFAULT FALSE,
+    disabled BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE TABLE IF NOT EXISTS key(
     key TEXT PRIMARY KEY,
