@@ -8,7 +8,7 @@ import (
 )
 
 // Open local file for storing secrets in it. File will be created if missing.
-func Open(filename string) (*SecretStorage, error) {
+func Open(filename string) (*sql.DB, error) {
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
 	_ = f.Close()
 	if err != nil {
@@ -22,18 +22,5 @@ func Open(filename string) (*SecretStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &SecretStorage{
-		db: db,
-	}, nil
-}
-
-type SecretStorage struct {
-	db *sql.DB
-}
-
-func (s *SecretStorage) Close() error {
-	if s == nil {
-		return nil
-	}
-	return s.db.Close()
+	return db, nil
 }
