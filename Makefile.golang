@@ -11,7 +11,7 @@ APPS?=$(patsubst $(CMD_DIR)/%/.,%,$(wildcard $(CMD_DIR)/*/.))
 EXE=$(patsubst %,$(BIN_DIR)/%$(BIN_SUFFIX),$(APPS))
 CMD_DIR?=./cmd
 BIN_DIR?=bin
-BIN_SUFFIX?=--$(GOOS)-$(GOARCH)$(GOEXE)
+BIN_SUFFIX?=@$(GOOS)-$(GOARCH)$(GOEXE)
 
 GOARCH:=$(shell $(GO) env GOARCH)
 GOEXE:=$(shell $(GO) env GOEXE)
