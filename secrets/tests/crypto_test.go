@@ -35,11 +35,21 @@ func TestEncrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	var value = "test-secret-value"
+	var keywords = []string{"test-namespace", "test-keyword"}
+
 	var secret crypto.SecretValue
-	err = secret.Encrypt(sign, value, "test-namespace", "test-keyword")
+	err = secret.Encrypt(sign, value, keywords...)
 	if err != nil {
 		t.Fatal(err)
+	}
+	output, err := secret.Decrypt(sign, keywords...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output != value {
+		t.Fatalf("value got mangled during encryption: original=%q, modified=%q", value, output)
 	}
 	t.Logf("%x", secret)
 }

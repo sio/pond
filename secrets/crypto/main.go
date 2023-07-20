@@ -29,7 +29,7 @@ func (s *SecretValue) Decrypt(sign SignerFunc, keywords ...string) (string, erro
 	case 1:
 		return s.v1decrypt(sign, keywords...)
 	default:
-		return "", fmt.Errorf("unsupported secret version %d", (*s)[0])
+		return "", fmt.Errorf("unsupported SecretValue version %d", (*s)[0])
 	}
 }
 
