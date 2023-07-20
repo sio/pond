@@ -30,26 +30,39 @@ func Signer(keyname string) (crypto.SignerFunc, error) {
 	}, nil
 }
 
-func TestEncrypt(t *testing.T) {
+func FuzzEncrypt(f *testing.F) {
 	sign, err := Signer("keys/storage")
 	if err != nil {
-		t.Fatal(err)
+		f.Fatal(err)
 	}
 
-	var value = "test-secret-value"
-	var keywords = []string{"test-namespace", "test-keyword"}
+	f.Add("test-secret-value", "test-namespace", 3)
+	f.Add("test-another-value", "test-namespace-new", 1)
 
+	const maxKeywords = 50
 	var secret crypto.SecretValue
-	err = secret.Encrypt(sign, value, keywords...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	output, err := secret.Decrypt(sign, keywords...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if output != value {
-		t.Fatalf("value got mangled during encryption: original=%q, modified=%q", value, output)
-	}
-	t.Logf("%x", secret)
+	f.Fuzz(func(t *testing.T, value string, keyword string, repeat int) {
+		if repeat == 0 {
+			repeat = 1
+		}
+		if repeat < 0 {
+			repeat *= -1
+		}
+		repeat = repeat % maxKeywords
+		var keywords = make([]string, repeat)
+		for i := 0; i < repeat; i++ {
+			keywords[i] = keyword
+		}
+		err := secret.Encrypt(sign, value, keywords...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		output, err := secret.Decrypt(sign, keywords...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if output != value {
+			t.Fatalf("value got mangled during encryption: original=%q, modified=%q", value, output)
+		}
+	})
 }

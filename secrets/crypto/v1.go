@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	v1tag           = 1
-	v1sshNonceBytes = 32
-	v1kdfNonceBytes = 32
-	v1boxNonceBytes = 24
-	v1boxKeyBytes   = 32
+	v1tag             = 1
+	v1sshNonceBytes   = 32
+	v1kdfNonceBytes   = 32
+	v1boxNonceBytes   = 24
+	v1paddingMaxBytes = 32
+	v1boxKeyBytes     = 32
 )
 
 func (s *SecretValue) v1encrypt(sign SignerFunc, value string, keywords ...string) error {
@@ -35,16 +36,21 @@ func (s *SecretValue) v1encrypt(sign SignerFunc, value string, keywords ...strin
 	var boxNonce [v1boxNonceBytes]byte
 	_, err = io.ReadFull(rand.Reader, boxNonce[:])
 	if err != nil {
-		return fmt.Errorf("failed to generated nonce for secret box: %w", err)
+		return fmt.Errorf("failed to generate nonce for secret box: %w", err)
 	}
+	padding := make([]byte, v1paddingMaxBytes)
+	_, err = io.ReadFull(rand.Reader, padding)
+	if err != nil {
+		return fmt.Errorf("failed to generate padding for secret box: %w", err)
+	}
+	padding = padding[:1+int(padding[0])%v1paddingMaxBytes]
 	secret := bytes.Join([][]byte{
 		[]byte{v1tag},
 		sshNonce,
 		kdfNonce,
 		boxNonce[:],
 	}, nil)
-	encrypted := secretbox.Seal(secret, []byte(value), &boxNonce, &key)
-	*s = SecretValue(encrypted)
+	*s = SecretValue(secretbox.Seal(secret, append(padding, []byte(value)...), &boxNonce, &key))
 	return nil
 }
 
@@ -92,8 +98,14 @@ func (s *SecretValue) v1decrypt(sign SignerFunc, keywords ...string) (string, er
 	if !ok {
 		return "", fmt.Errorf("secretbox decryption failed")
 	}
-
-	return string(value), nil
+	if len(value) < 1 {
+		return "", fmt.Errorf("missing padding length tag after decryption")
+	}
+	skip := 1 + int(value[0])%v1paddingMaxBytes
+	if len(value) < skip {
+		return "", fmt.Errorf("invalid padding length (%d bytes) in decrypted value (%d bytes)", skip, len(value))
+	}
+	return string(value[skip:]), nil
 }
 
 // Produce a deterministic cryptographic signature for non-secret input
