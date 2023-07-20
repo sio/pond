@@ -1,5 +1,8 @@
 package tests
 
+// TODO: save some known good data points (plain text -> encrypted)
+// TODO: use second implementation of v1 algorithm to verify correctness
+
 import (
 	"testing"
 
