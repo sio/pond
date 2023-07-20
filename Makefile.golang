@@ -81,6 +81,10 @@ DELVE=$(GOPATH)/bin/dlv$(GOEXE)
 $(DELVE):
 	$(GO) install github.com/go-delve/delve/cmd/dlv@latest
 
+.PHONY: debug delve
+debug delve: $(DELVE)  ## start interactive debugger
+	$(DELVE) debug $(INTO)
+
 .PHONY: debug-core
 debug-core: CORE?=core.$(PID)
 debug-core: EXE?=$(shell readlink /proc/$(PID)/exe)
