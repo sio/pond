@@ -1,3 +1,5 @@
+KEY?=../../tests/keys/storage
+
 .PHONY: generate
 generate: venv
 	$(VENV)/python generate.py $(KEY)
