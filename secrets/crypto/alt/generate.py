@@ -22,14 +22,16 @@ def main():
         keywords = coolname.generate(random.randint(2, 4))
         signature, sig_nonce = v1._sign(signer, keywords)
         key, kdf_nonce = v1._kdf(signature)
-        encrypted = v1.encrypt(signer, message, keywords)
+        encrypted, padding = v1.encrypt(signer, message, keywords)
         output["samples"].append(dict(
             message=message,
+            keywords=keywords,
             signature_nonce=b64(sig_nonce),
             signature=b64(signature),
             kdf_nonce=b64(kdf_nonce),
             key=b64(key),
             encrypted=b64(encrypted),
+            padding=b64(padding),
         ))
     print(json.dumps(output, indent=2, ensure_ascii=False, sort_keys=True))
 

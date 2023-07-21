@@ -20,7 +20,8 @@ def encrypt(signer, value: str, keywords) -> bytes:
     padding = os.urandom(padding_max_bytes)
     padding = padding[:1+padding[0]%padding_max_bytes]
     box = nacl.secret.SecretBox(key)
-    return tag + ssh_nonce + kdf_nonce + box_nonce + box.encrypt(padding + value.encode('utf-8'))
+    encrypted = box.encrypt(padding + value.encode('utf-8'), box_nonce)[len(box_nonce):]
+    return tag + ssh_nonce + kdf_nonce + box_nonce + encrypted, padding
 
 def decrypt(signer, ciphertext: bytes, keywords) -> str:
     pass
