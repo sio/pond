@@ -7,4 +7,6 @@ edge cases.
 This code is used only for generating test data, not for building any
 binaries.
 
-Output of this script is saved to `../sample_py_v1.json`
+## Usage
+
+Run `make` to generate some new test samples like the ones stored in `../sample_py_v1.json`
