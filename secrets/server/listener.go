@@ -84,7 +84,7 @@ func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 	}
 	conn, chans, reqs, err := ssh.NewServerConn(tcp, s.config)
 	if err != nil {
-		log.Printf("failed to accept SSH connection: %v", err)
+		log.Printf("failed to accept SSH connection from %s: %v", tcp.RemoteAddr(), err)
 		return
 	}
 	defer conn.Close()
