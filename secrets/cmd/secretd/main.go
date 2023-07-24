@@ -1,17 +1,16 @@
 package main
 
 import (
-	"secrets/db"
+	"secrets/server"
 
-	"fmt"
+	"context"
+	"log"
 )
 
 func main() {
-	secrets, err := db.Open("hello.sqlite")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
+	s, e := server.New("tests/keys/storage.pub")
+	if e != nil {
+		log.Fatal(e)
 	}
-	defer secrets.Close()
-	fmt.Println("Secrets:", secrets)
+	s.Run(context.Background(), ":2222")
 }
