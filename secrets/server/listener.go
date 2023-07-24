@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -89,9 +91,81 @@ func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 	}
 	defer conn.Close()
 	go ssh.DiscardRequests(reqs)
-	s.handleSSH(ctx, conn, chans)
+	err = s.handleSSH(ctx, conn, chans)
+	if err != nil {
+		log.Printf("SSH session from %s failed: %v", tcp.RemoteAddr(), err)
+	}
 }
 
-func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chans <-chan ssh.NewChannel) {
-	log.Println("TODO: handle SSH connections")
+func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chans <-chan ssh.NewChannel) error {
+	select {
+	case <-ctx.Done():
+		return nil
+	case incoming := <-chans:
+		if incoming == nil {
+			return nil
+		}
+		if incoming.ChannelType() != "session" {
+			message := fmt.Sprintf("unknown channel type: %s", incoming.ChannelType())
+			incoming.Reject(ssh.UnknownChannelType, msg)
+			return fmt.Errorf(message)
+		}
+		ch, reqs, err := incoming.Accept()
+		if err != nil {
+			return fmt.Errorf("failed to accept SSH channel: %w", err)
+		}
+		defer ch.Close()
+		endpoint := getEndpoint(reqs)
+		log.Printf("Detected API endpoint: %q", endpoint)
+		go discardChannelRequests(ctx, reqs)
+		query, err := io.ReadAll(ch)
+		if err != nil {
+			return fmt.Errorf("error while receiving API query: %w", err)
+		}
+		log.Printf("new API query (%d bytes): %q\n", len(query), string(query))
+		ch.Write([]byte(strings.ToUpper(string(query))))
+		return nil
+	}
+}
+
+// Detect API endpoint based on requests currently queued in ssh channel
+func getEndpoint(requests <-chan *ssh.Request) string {
+	var endpoint string
+loop:
+	for {
+		select {
+		case r := <-requests:
+			if r == nil {
+				break loop
+			}
+			var allow bool
+			switch r.Type {
+			case "exec":
+				endpoint = string(r.Payload[4:])
+				allow = true
+			case "shell", "pty-req":
+				allow = true
+			default:
+				allow = false
+			}
+			r.Reply(allow, nil)
+		case <-time.After(time.Second / 100): // we've exhaused pending requests queue
+			break loop
+		}
+	}
+	return endpoint
+}
+
+func discardChannelRequests(ctx context.Context, reqs <-chan *ssh.Request) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case r := <-reqs:
+			if r == nil {
+				return
+			}
+			r.Reply(false, nil)
+		}
+	}
 }
