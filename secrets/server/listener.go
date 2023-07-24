@@ -30,6 +30,7 @@ func New(publicKeyPath string) (*SecretServer, error) {
 			}, nil
 		},
 	}
+	config.AddHostKey(agent)
 	return &SecretServer{
 		agent:  agent,
 		config: config,
