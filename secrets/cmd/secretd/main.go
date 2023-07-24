@@ -12,5 +12,5 @@ func main() {
 	if e != nil {
 		log.Fatal(e)
 	}
-	s.Run(context.Background(), ":2222")
+	s.Run(context.Background(), "127.0.0.1:2222")
 }
