@@ -125,6 +125,15 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 		}
 		log.Printf("new API query (%d bytes): %q\n", len(query), string(query))
 		ch.Write([]byte(strings.ToUpper(string(query))))
+		ch.CloseWrite()
+		_, err = ch.SendRequest("eow@openssh.com", false, nil)
+		if err != nil {
+			return fmt.Errorf("failed to send eow: %w", err)
+		}
+		_, err = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+		if err != nil {
+			return fmt.Errorf("failed to send exit-status: %w", err)
+		}
 		return nil
 	}
 }
