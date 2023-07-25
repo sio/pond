@@ -145,8 +145,11 @@ loop:
 	for {
 		select {
 		case r, ok := <-requests:
-			if !ok || r == nil {
+			if !ok {
 				break loop
+			}
+			if r == nil {
+				continue
 			}
 			var allow bool
 			switch r.Type {
@@ -174,8 +177,11 @@ func discardRequests(ctx context.Context, reqs <-chan *ssh.Request) {
 		case <-ctx.Done():
 			return
 		case r, ok := <-reqs:
-			if !ok || r == nil {
+			if !ok {
 				return
+			}
+			if r == nil {
+				continue
 			}
 			if r.WantReply {
 				r.Reply(false, nil)
