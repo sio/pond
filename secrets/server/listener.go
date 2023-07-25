@@ -90,7 +90,7 @@ func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 		return
 	}
 	defer conn.Close()
-	go ssh.DiscardRequests(reqs)
+	go discardRequests(ctx, reqs)
 	err = s.handleSSH(ctx, conn, chans)
 	if err != nil {
 		log.Printf("SSH session from %s failed: %v", tcp.RemoteAddr(), err)
@@ -117,7 +117,7 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 		defer ch.Close()
 		endpoint := getEndpoint(reqs)
 		log.Printf("Detected API endpoint: %q", endpoint)
-		go discardChannelRequests(ctx, reqs)
+		go discardRequests(ctx, reqs)
 		query, err := io.ReadAll(ch)
 		if err != nil {
 			return fmt.Errorf("error while receiving API query: %w", err)
@@ -156,7 +156,9 @@ loop:
 	return endpoint
 }
 
-func discardChannelRequests(ctx context.Context, reqs <-chan *ssh.Request) {
+// Similar to ssh.DiscardRequests but less prone to goroutine leaks,
+// this function exits on context cancellation and on closing requests channel.
+func discardRequests(ctx context.Context, reqs <-chan *ssh.Request) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -165,7 +167,9 @@ func discardChannelRequests(ctx context.Context, reqs <-chan *ssh.Request) {
 			if !ok || r == nil {
 				return
 			}
-			r.Reply(false, nil)
+			if r.WantReply {
+				r.Reply(false, nil)
+			}
 		}
 	}
 }
