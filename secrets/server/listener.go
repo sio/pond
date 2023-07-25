@@ -101,13 +101,13 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 	select {
 	case <-ctx.Done():
 		return nil
-	case incoming := <-chans:
-		if incoming == nil {
+	case incoming, ok := <-chans:
+		if !ok || incoming == nil {
 			return nil
 		}
 		if incoming.ChannelType() != "session" {
 			message := fmt.Sprintf("unknown channel type: %s", incoming.ChannelType())
-			incoming.Reject(ssh.UnknownChannelType, msg)
+			incoming.Reject(ssh.UnknownChannelType, message)
 			return fmt.Errorf(message)
 		}
 		ch, reqs, err := incoming.Accept()
@@ -134,8 +134,8 @@ func getEndpoint(requests <-chan *ssh.Request) string {
 loop:
 	for {
 		select {
-		case r := <-requests:
-			if r == nil {
+		case r, ok := <-requests:
+			if !ok || r == nil {
 				break loop
 			}
 			var allow bool
@@ -161,8 +161,8 @@ func discardChannelRequests(ctx context.Context, reqs <-chan *ssh.Request) {
 		select {
 		case <-ctx.Done():
 			return
-		case r := <-reqs:
-			if r == nil {
+		case r, ok := <-reqs:
+			if !ok || r == nil {
 				return
 			}
 			r.Reply(false, nil)
