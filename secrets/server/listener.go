@@ -27,7 +27,7 @@ func New(publicKeyPath string) (*SecretServer, error) {
 		PublicKeyCallback: func(conn ssh.ConnMetadata, pubkey ssh.PublicKey) (*ssh.Permissions, error) {
 			return &ssh.Permissions{
 				Extensions: map[string]string{
-					"pubkey": string(pubkey.Marshal()),
+					"pubkey": strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pubkey))),
 				},
 			}, nil
 		},
@@ -117,6 +117,7 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 		defer ch.Close()
 		endpoint := getEndpoint(reqs)
 		log.Printf("Detected API endpoint: %q", endpoint)
+		log.Printf("Query from %s", conn.Permissions.Extensions["pubkey"])
 		go discardRequests(ctx, reqs)
 		query, err := io.ReadAll(ch)
 		if err != nil {
