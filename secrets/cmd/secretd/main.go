@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	s, e := server.New("tests/keys/storage.pub")
+	s, e := server.New("tests/keys/storage.pub", "/tmp/hello.sqlite")
 	if e != nil {
 		log.Fatal(e)
 	}

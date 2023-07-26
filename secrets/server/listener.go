@@ -11,6 +11,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"secrets/db"
+	"secrets/util"
 )
 
 const (
@@ -18,7 +21,7 @@ const (
 )
 
 // Initialize SecretServer
-func New(publicKeyPath string) (*SecretServer, error) {
+func New(publicKeyPath, databasePath string) (*SecretServer, error) {
 	agent, err := newSSHAgentConn(publicKeyPath)
 	if err != nil {
 		return nil, err
@@ -33,15 +36,21 @@ func New(publicKeyPath string) (*SecretServer, error) {
 		},
 	}
 	config.AddHostKey(agent)
+	db, err := db.Open(databasePath)
+	if err != nil {
+		return nil, err
+	}
 	return &SecretServer{
 		agent:  agent,
 		config: config,
+		db:     db,
 	}, nil
 }
 
 type SecretServer struct {
 	config *ssh.ServerConfig
 	agent  *sshAgentConn
+	db     *db.Database
 }
 
 func (s *SecretServer) Run(ctx context.Context, address string) error {
@@ -91,9 +100,12 @@ func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 	}
 	defer conn.Close()
 	go discardRequests(ctx, reqs)
+	log.Printf("Client %s: new connection", tcp.RemoteAddr())
 	err = s.handleSSH(ctx, conn, chans)
 	if err != nil {
-		log.Printf("SSH session from %s failed: %v", tcp.RemoteAddr(), err)
+		log.Printf("Client %s: %v", tcp.RemoteAddr(), err)
+	} else {
+		log.Printf("Client %s: closing connection", tcp.RemoteAddr())
 	}
 }
 
@@ -115,32 +127,39 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 			return fmt.Errorf("failed to accept SSH channel: %w", err)
 		}
 		defer ch.Close()
+
+		pubkey := conn.Permissions.Extensions["pubkey"]
 		endpoint := getEndpoint(reqs)
-		log.Printf("Detected API endpoint: %q", endpoint)
-		log.Printf("Query from %s", conn.Permissions.Extensions["pubkey"])
-		go discardRequests(ctx, reqs)
-		query, err := io.ReadAll(ch)
+		go discardRequests(ctx, reqs) // must go right after getEndpoint()
+		body, err := io.ReadAll(ch)
+
 		if err != nil {
-			return fmt.Errorf("error while receiving API query: %w", err)
+			return fmt.Errorf("error while reading API query body: %w", err)
 		}
-		log.Printf("new API query (%d bytes): %q\n", len(query), string(query))
-		ch.Write([]byte(strings.ToUpper(string(query))))
-		ch.CloseWrite()
+
+		var errs util.MultiError
+		resp, err := s.handleAPI(ctx, pubkey, endpoint, body)
+		errs.Errorf("handleAPI: %w", err)
+
+		_, err = ch.Write(resp)
+		errs.Errorf("writing to SSH channel: %w", err)
+
+		err = ch.CloseWrite()
+		errs.Errorf("closing SSH channel for writing: %w", err)
+
 		_, err = ch.SendRequest("eow@openssh.com", false, nil)
-		if err != nil {
-			return fmt.Errorf("failed to send eow: %w", err)
-		}
+		errs.Errorf("sending eow: %w", err)
+
 		_, err = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
-		if err != nil {
-			return fmt.Errorf("failed to send exit-status: %w", err)
-		}
-		return nil
+		errs.Errorf("sending exit-status: %w", err)
+
+		return errs.Err()
 	}
 }
 
 // Detect API endpoint based on requests currently queued in ssh channel
 func getEndpoint(requests <-chan *ssh.Request) string {
-	var endpoint string
+	var endpoint = defaultEndpoint
 loop:
 	for {
 		select {

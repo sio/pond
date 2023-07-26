@@ -7,8 +7,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type Database struct {
+	sql *sql.DB
+}
+
 // Open local file for storing secrets in it. File will be created if missing.
-func Open(filename string) (*sql.DB, error) {
+func Open(filename string) (*Database, error) {
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
 	_ = f.Close()
 	if err != nil {
@@ -22,5 +26,5 @@ func Open(filename string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	return &Database{sql: db}, nil
 }
