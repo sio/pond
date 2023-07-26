@@ -2,6 +2,9 @@
 
 ## Low priority
 
+- Make use of context.Context:
+    - Set deadline
+    - Use CancelFunc
 - SSH client sometimes errors out while accessing API with either
   `client_loop: send disconnect: Broken pipe` or
   `client_loop: send disconnect: Connection reset by peer`.
