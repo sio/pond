@@ -1,11 +1,8 @@
 include ../Makefile.golang
 .DEFAULT_GOAL=run-secretd
 
-# Not using static build here because of sqlite:
-# sqlite3-binding.c:43784:
-#   warning: Using 'dlopen' in statically linked applications requires at
-#   runtime the shared libraries from the glibc version used for linking
-#GOBUILD_ARGS=-tags netgo,osusergo -ldflags="-extldflags=-static"
+# https://www.arp242.net/static-go.html
+GOBUILD_ARGS=-tags netgo,osusergo,sqlite_omit_load_extension -ldflags="-extldflags=-static"
 
 $(EXE): $(shell find . -type f -iname '*.sql')
 
