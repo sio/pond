@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync/atomic"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -31,6 +32,7 @@ type sshAgentConn struct {
 	key    ssh.PublicKey
 	socket net.Conn
 	agent  agent.Agent
+	count  uint32 // TODO: expose as metrics
 }
 
 func (c *sshAgentConn) PublicKey() ssh.PublicKey {
@@ -53,6 +55,7 @@ func (c *sshAgentConn) sign(rand io.Reader, data []byte) (*ssh.Signature, error)
 	if c.agent == nil || c.key == nil {
 		return nil, fmt.Errorf("ssh-agent connection not initialized")
 	}
+	atomic.AddUint32(&c.count, 1)
 	return c.agent.Sign(c.key, data)
 }
 
