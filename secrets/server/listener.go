@@ -7,7 +7,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -64,6 +66,19 @@ func (s *SecretServer) Run(ctx context.Context, address string) error {
 	if !ok {
 		return fmt.Errorf("not a TCPListener: %T", l)
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for s := range signals {
+			_, _ = fmt.Fprintln(os.Stderr, "")
+			log.Printf("Caught %s, initiating graceful exit...", s)
+			cancel()
+		}
+	}()
 
 	for {
 		select {
