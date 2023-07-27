@@ -2,6 +2,7 @@
 
 ## Low priority
 
+- Remove SignerFunc and replace it with ssh.Signer
 - Make use of context.Context:
     - Set deadline
     - Use CancelFunc
