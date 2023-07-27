@@ -8,7 +8,7 @@ import (
 )
 
 // Use local private key for signing messages in tests
-func LocalKey(keyname string) (SignerFunc, error) {
+func LocalKey(keyname string) (ssh.Signer, error) {
 	raw, err := os.ReadFile(keyname)
 	if err != nil {
 		return nil, err
@@ -21,9 +21,7 @@ func LocalKey(keyname string) (SignerFunc, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%T can not be used for signatures: %w", key, err)
 	}
-	return func(data []byte) (*ssh.Signature, error) {
-		return private.Sign(rand.Reader, data)
-	}, nil
+	return private, nil
 }
 
 // Create cryptographic signature with default settings

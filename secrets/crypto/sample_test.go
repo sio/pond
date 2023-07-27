@@ -25,11 +25,11 @@ func TestReadingFromPython(t *testing.T) {
 	if err = json.Unmarshal(sampleRaw, &collection); err != nil {
 		t.Fatal(err)
 	}
-	sign, err := LocalKey(decryptWith)
+	signer, err := LocalKey(decryptWith)
 	if err != nil {
 		t.Fatal(err)
 	}
-	challenge, err := sign([]byte(samplePath))
+	challenge, err := Sign(signer, []byte(samplePath))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func TestReadingFromPython(t *testing.T) {
 	}
 	for index, sample := range collection.Samples {
 		t.Run(fmt.Sprint(index), func(t *testing.T) {
-			signature, _, err := v1signature(sign, sample.Keywords, sample.SignatureNonce)
+			signature, _, err := v1signature(signer, sample.Keywords, sample.SignatureNonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,7 +60,7 @@ func TestReadingFromPython(t *testing.T) {
 			} else {
 				t.Log("OK: HKDF keys match")
 			}
-			decrypted, err := sample.Encrypted.Decrypt(sign, sample.Keywords...)
+			decrypted, err := sample.Encrypted.Decrypt(signer, sample.Keywords...)
 			if err != nil {
 				t.Fatal(err)
 			}

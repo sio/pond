@@ -16,22 +16,19 @@ var (
 type SecretValue []byte
 
 // Encrypt sensitive value
-func (s *SecretValue) Encrypt(sign SignerFunc, value string, keywords ...string) error {
-	return s.v1encrypt(sign, value, keywords...)
+func (s *SecretValue) Encrypt(signer ssh.Signer, value string, keywords ...string) error {
+	return s.v1encrypt(signer, value, keywords...)
 }
 
 // Decrypt sensitive value
-func (s *SecretValue) Decrypt(sign SignerFunc, keywords ...string) (string, error) {
+func (s *SecretValue) Decrypt(signer ssh.Signer, keywords ...string) (string, error) {
 	if len(*s) == 0 {
 		return "", nil
 	}
 	switch (*s)[0] {
 	case 1:
-		return s.v1decrypt(sign, keywords...)
+		return s.v1decrypt(signer, keywords...)
 	default:
 		return "", fmt.Errorf("unsupported SecretValue version %d", (*s)[0])
 	}
 }
-
-// Helpful alias to frequently used function type
-type SignerFunc = func(m []byte) (*ssh.Signature, error)

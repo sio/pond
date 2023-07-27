@@ -12,6 +12,7 @@ import (
 	"io"
 
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/nacl/secretbox"
 )
 
@@ -24,8 +25,8 @@ const (
 	v1boxKeyBytes     = 32
 )
 
-func (s *SecretValue) v1encrypt(sign SignerFunc, value string, keywords ...string) error {
-	signature, sshNonce, err := v1signature(sign, keywords, nil)
+func (s *SecretValue) v1encrypt(signer ssh.Signer, value string, keywords ...string) error {
+	signature, sshNonce, err := v1signature(signer, keywords, nil)
 	if err != nil {
 		return err
 	}
@@ -54,7 +55,7 @@ func (s *SecretValue) v1encrypt(sign SignerFunc, value string, keywords ...strin
 	return nil
 }
 
-func (s *SecretValue) v1decrypt(sign SignerFunc, keywords ...string) (string, error) {
+func (s *SecretValue) v1decrypt(signer ssh.Signer, keywords ...string) (string, error) {
 	const minLen = 1 + v1sshNonceBytes + v1kdfNonceBytes + v1boxNonceBytes + secretbox.Overhead
 	if len(*s)-minLen < 1 {
 		return "", fmt.Errorf("encrypted value is too short: got %d bytes (want %d+ bytes)", len(*s), minLen)
@@ -84,7 +85,7 @@ func (s *SecretValue) v1decrypt(sign SignerFunc, keywords ...string) (string, er
 
 	box = []byte((*s)[stop:])
 
-	signature, _, err := v1signature(sign, keywords, sshNonce)
+	signature, _, err := v1signature(signer, keywords, sshNonce)
 	if err != nil {
 		return "", err
 	}
@@ -109,7 +110,7 @@ func (s *SecretValue) v1decrypt(sign SignerFunc, keywords ...string) (string, er
 }
 
 // Produce a deterministic cryptographic signature for non-secret input
-func v1signature(sign SignerFunc, keywords []string, nonce []byte) (signature, nonce_ []byte, err error) {
+func v1signature(signer ssh.Signer, keywords []string, nonce []byte) (signature, nonce_ []byte, err error) {
 	if nonce == nil {
 		nonce = make([]byte, v1sshNonceBytes)
 		_, err = io.ReadFull(rand.Reader, nonce)
@@ -123,7 +124,7 @@ func v1signature(sign SignerFunc, keywords []string, nonce []byte) (signature, n
 	for index, word := range keywords {
 		chunks[index+2] = []byte(word)
 	}
-	sig, err := sign(bytes.Join(chunks, magicSeparator))
+	sig, err := Sign(signer, bytes.Join(chunks, magicSeparator))
 	if err != nil {
 		return nil, nil, fmt.Errorf("ssh signature failed: %w", err)
 	}
