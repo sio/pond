@@ -19,10 +19,10 @@ type Database struct {
 // Open local file for storing secrets in it. File will be created if missing.
 func Open(filename string, key ssh.Signer) (*Database, error) {
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
-	_ = f.Close()
 	if err != nil {
 		return nil, err
 	}
+	_ = f.Close()
 	sql, err := sql.Open("sqlite3", filename)
 	if err != nil {
 		return nil, err
