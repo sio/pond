@@ -48,9 +48,9 @@ func (s *SecretServer) queryAPI(ctx context.Context, pubkey, endpoint string, bo
 	}
 	switch endpoint {
 	case defaultEndpoint:
-		return s.db.Execute(ctx, s.agent, pubkey, query)
+		return s.db.Execute(ctx, pubkey, query)
 	case "admin":
-		return s.db.ExecuteAdmin(ctx, s.agent, pubkey, query)
+		return s.db.ExecuteAdmin(ctx, pubkey, query)
 	default:
 		response.Error("invalid endpoint: %q", endpoint)
 		return response, nil

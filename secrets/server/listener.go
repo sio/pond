@@ -38,12 +38,11 @@ func New(publicKeyPath, databasePath string) (*SecretServer, error) {
 		},
 	}
 	config.AddHostKey(agent)
-	db, err := db.Open(databasePath)
+	db, err := db.Open(databasePath, agent)
 	if err != nil {
 		return nil, err
 	}
 	return &SecretServer{
-		agent:  agent,
 		config: config,
 		db:     db,
 	}, nil
@@ -51,12 +50,11 @@ func New(publicKeyPath, databasePath string) (*SecretServer, error) {
 
 type SecretServer struct {
 	config *ssh.ServerConfig
-	agent  *sshAgentConn
 	db     *db.Database
 }
 
 func (s *SecretServer) Run(ctx context.Context, address string) error {
-	defer s.agent.Close()
+	defer s.db.Close()
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("failed to start TCP server: %w", err)

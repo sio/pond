@@ -25,3 +25,8 @@ func LocalKey(keyname string) (SignerFunc, error) {
 		return private.Sign(rand.Reader, data)
 	}, nil
 }
+
+// Create cryptographic signature with default settings
+func Sign(s ssh.Signer, data []byte) (*ssh.Signature, error) {
+	return s.Sign(rand.Reader, data)
+}
