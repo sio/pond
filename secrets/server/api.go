@@ -26,6 +26,10 @@ func (s *SecretServer) handleAPI(ctx context.Context, pubkey, endpoint string, b
 	raw, e = json.Marshal(resp)
 	errs = append(errs, e)
 
+	if len(raw) > 0 && raw[len(raw)-1] != byte('\n') {
+		raw = append(raw, byte('\n'))
+	}
+
 	return raw, errors.Join(errs...)
 }
 
