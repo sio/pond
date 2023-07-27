@@ -22,11 +22,11 @@ func (db *Database) encryptionKey() (ssh.PublicKey, error) {
 		return nil, errKeyNotDefined
 	}
 	if err != nil {
-		return nil, fmt.Errorf("fetching encryption key: %w")
+		return nil, fmt.Errorf("fetching encryption key: %w", err)
 	}
 	key, _, _, _, err := ssh.ParseAuthorizedKey(serialized)
 	if err != nil {
-		return nil, fmt.Errorf("parsing encryption key: %w")
+		return nil, fmt.Errorf("parsing encryption key: %w", err)
 	}
 	return key, nil
 }
