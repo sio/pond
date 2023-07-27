@@ -22,7 +22,7 @@ GOPATH:=$(shell $(GO) env GOPATH)
 build: $(EXE)  ## compile all binaries
 $(EXE): $(shell find . -type f -iname '*.go') go.sum
 	$(GO) build $(GOBUILD_ARGS) -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
-	-ldd $@
+	ldd $@ || true
 
 .PHONY: $(RUNNERS)
 RUNNERS=$(patsubst %,run-%,$(APPS))
