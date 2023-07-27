@@ -2,6 +2,10 @@
 
 ## Low priority
 
+- Limit max size of incoming API request to 16-20KB (max payload size
+  recommended for nacl.SecretBox)
+    - In body reader?
+    - In JSON deserialization routine?
 - Make use of context.Context:
     - Set deadline
     - Use CancelFunc
