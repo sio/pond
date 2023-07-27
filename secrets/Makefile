@@ -4,6 +4,9 @@ include ../Makefile.golang
 # https://www.arp242.net/static-go.html
 GOBUILD_ARGS=-tags netgo,osusergo,sqlite_omit_load_extension -ldflags="-extldflags=-static"
 
+# Fail if C compiler is not available (required for sqlite)
+export CGO_ENABLED=1
+
 $(EXE): $(shell find . -type f -iname '*.sql')
 
 MANUAL_TEST_PORT=2222
