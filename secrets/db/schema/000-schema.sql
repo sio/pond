@@ -73,6 +73,13 @@ CREATE TABLE IF NOT EXISTS key(
 );
 
 
+-- Remember public key currently used for encryption
+CREATE TABLE IF NOT EXISTS encryption(
+    key TEXT NOT NULL,
+    timestamp DATETIME DEFAULT (datetime('now', 'utc'))
+);
+
+
 -- Database schema migrations
 CREATE TABLE IF NOT EXISTS migration(
     schema TEXT NOT NULL,
