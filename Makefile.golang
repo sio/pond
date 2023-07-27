@@ -18,11 +18,16 @@ GOEXE:=$(shell $(GO) env GOEXE)
 GOOS:=$(shell $(GO) env GOOS)
 GOPATH:=$(shell $(GO) env GOPATH)
 
+LDD_CHECK=|| true
+ifdef GOBUILD_MUST_STATIC
+LDD_CHECK=
+endif
+
 .PHONY: build
 build: $(EXE)  ## compile all binaries
 $(EXE): $(shell find . -type f -iname '*.go') go.sum
 	$(GO) build $(GOBUILD_ARGS) -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
-	ldd $@ || true
+	! ldd $@ $(LDD_CHECK)
 
 .PHONY: $(RUNNERS)
 RUNNERS=$(patsubst %,run-%,$(APPS))
