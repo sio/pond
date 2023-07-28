@@ -14,6 +14,7 @@ type Response struct {
 	Items  []json.RawMessage `json:"items,omitempty"`
 }
 
+// Send payload to end user
 func (r *Response) Send(item any) {
 	raw, err := json.Marshal(item)
 	if err != nil {
@@ -41,4 +42,16 @@ func (r *Response) LastError() error {
 		return nil
 	}
 	return fmt.Errorf(r.Errors[len(r.Errors)-1])
+}
+
+// Make sure that empty .Errors slice does not get serialized to JSON as "null"
+// instead of "[]".
+// Similar handling for .Items is not required because of "omitempty".
+func (r *Response) MarshalJSON() ([]byte, error) {
+	type responseData Response
+	data := responseData(*r)
+	if data.Errors == nil {
+		data.Errors = make([]string, 0)
+	}
+	return json.Marshal(data)
 }
