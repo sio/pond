@@ -15,7 +15,7 @@ import (
 )
 
 type Database struct {
-	sql *sql.DB
+	sql *sql.DB // TODO: expose sql.DB.Stats() as metrics
 	key ssh.Signer
 }
 
