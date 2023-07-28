@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -31,7 +30,7 @@ func New(publicKeyPath, databasePath string) (*SecretServer, error) {
 		PublicKeyCallback: func(conn ssh.ConnMetadata, pubkey ssh.PublicKey) (*ssh.Permissions, error) {
 			return &ssh.Permissions{
 				Extensions: map[string]string{
-					"pubkey": strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pubkey))),
+					"pubkey": util.KeyText(pubkey),
 				},
 			}, nil
 		},
