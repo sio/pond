@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// Note: replacing this with a generic Response[T any] while introduces type
+// safety for Send() function is more trouble than it's worth. All receivers of
+// *Response type would need to specify which instance of Response[T] they
+// expect, and it's not that simple to declare beforehand.
 type Response struct {
 	Errors []string          `json:"errors"`
 	Items  []json.RawMessage `json:"items,omitempty"`
