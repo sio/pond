@@ -146,7 +146,7 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 
 		var errs util.MultiError
 		resp, err := s.handleAPI(ctx, pubkey, endpoint, ch)
-		errs.Errorf("handleAPI: %w", err)
+		errs.Errorf("API handler: %w", err)
 
 		_, err = ch.Write(resp)
 		errs.Errorf("writing to SSH channel: %w", err)

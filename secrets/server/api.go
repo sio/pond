@@ -35,7 +35,7 @@ func (s *SecretServer) handleAPI(ctx context.Context, pubkey, endpoint string, b
 
 	resp, e = s.queryAPI(ctx, pubkey, endpoint, body)
 	if resp == nil {
-		resp = &db.Response{Errors: []string{"empty API response"}}
+		resp = &db.Response{Errors: []string{"empty response"}}
 	}
 	errs = append(errs, e)
 
@@ -68,6 +68,10 @@ func (s *SecretServer) queryAPI(ctx context.Context, pubkey, endpoint string, bo
 	if !errors.Is(err, io.EOF) {
 		response.Errorf("query sending failed")
 		return response, fmt.Errorf("reading request body: %w", err)
+	}
+	if buf.Len() == 0 {
+		response.Errorf("received empty query")
+		return response, response.LastError()
 	}
 	query := &db.Query{}
 	err = json.Unmarshal(buf.Bytes(), query)
