@@ -12,8 +12,8 @@ import (
 	"io"
 
 	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/ssh"
 )
 
 const (

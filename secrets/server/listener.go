@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -144,14 +143,9 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 		pubkey := conn.Permissions.Extensions["pubkey"]
 		endpoint := getEndpoint(reqs)
 		go discardRequests(ctx, reqs) // must go right after getEndpoint()
-		body, err := io.ReadAll(ch)
-
-		if err != nil {
-			return fmt.Errorf("error while reading API query body: %w", err)
-		}
 
 		var errs util.MultiError
-		resp, err := s.handleAPI(ctx, pubkey, endpoint, body)
+		resp, err := s.handleAPI(ctx, pubkey, endpoint, ch)
 		errs.Errorf("handleAPI: %w", err)
 
 		_, err = ch.Write(resp)
