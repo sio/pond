@@ -188,7 +188,9 @@ loop:
 			default:
 				allow = false
 			}
-			r.Reply(allow, nil)
+			if r.WantReply {
+				r.Reply(allow, nil)
+			}
 		case <-time.After(time.Second / 100): // we've exhaused pending requests queue
 			break loop
 		}
