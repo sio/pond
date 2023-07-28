@@ -92,7 +92,7 @@ func (s *SecretServer) Run(ctx context.Context, address string) error {
 			continue
 		}
 		if err != nil {
-			log.Printf("failed to accept TCP connection: %v", err)
+			log.Printf("TCP accept: %v", err)
 			continue
 		}
 		go s.handleTCP(ctx, conn)
@@ -103,22 +103,21 @@ func (s *SecretServer) Run(ctx context.Context, address string) error {
 func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 	defer tcp.Close()
 	if err := tcp.SetDeadline(time.Now().Add(connectionTimeout)); err != nil {
-		log.Printf("failed to set TCP deadline: %v", err)
+		log.Printf("TCP deadline: %v", err)
 		return
 	}
 	conn, chans, reqs, err := ssh.NewServerConn(tcp, s.config)
 	if err != nil {
-		log.Printf("failed to accept SSH connection from %s: %v", tcp.RemoteAddr(), err)
+		log.Printf("SSH handshake from %s: %v", tcp.RemoteAddr(), err)
 		return
 	}
 	defer conn.Close()
 	go discardRequests(ctx, reqs)
-	log.Printf("Client %s: new connection", tcp.RemoteAddr())
 	err = s.handleSSH(ctx, conn, chans)
 	if err != nil {
 		log.Printf("Client %s: %v", tcp.RemoteAddr(), err)
 	} else {
-		log.Printf("Client %s: closing connection", tcp.RemoteAddr())
+		log.Printf("Client %s: OK", tcp.RemoteAddr())
 	}
 }
 
