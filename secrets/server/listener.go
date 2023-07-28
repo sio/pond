@@ -77,6 +77,7 @@ func (s *SecretServer) Run(ctx context.Context, address string) error {
 		}
 	}()
 
+	log.Printf("Listening on %s", listener.Addr())
 	for {
 		select {
 		case <-ctx.Done():
