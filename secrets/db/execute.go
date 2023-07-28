@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 )
 
 func (db *Database) Execute(ctx context.Context, pubkey string, query *Query) (*Response, error) {
@@ -12,7 +13,7 @@ func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Quer
 	var response = new(Response)
 	if !db.isAdmin(pubkey) {
 		response.Errorf("permission denied")
-		return response, response.LastError()
+		return response, fmt.Errorf("administrative access denied: %s", pubkey)
 	}
 	return nil, nil
 }

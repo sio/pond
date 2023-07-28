@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 
@@ -32,11 +34,13 @@ func (db *Database) encryptionKey() (ssh.PublicKey, error) {
 }
 
 func (db *Database) setEncryptionKey() error {
-	query := `INSERT INTO encryption(key) VALUES (?)`
-	_, err := db.sql.Exec(query, string(ssh.MarshalAuthorizedKey(db.key.PublicKey())))
+	const query = `INSERT INTO encryption(key) VALUES (?)`
+	var key = strings.TrimSpace(string(ssh.MarshalAuthorizedKey(db.key.PublicKey())))
+	_, err := db.sql.Exec(query, key)
 	if err != nil {
 		return fmt.Errorf("setting encryption key: %w", err)
 	}
+	log.Printf("IMPORTANT: setting encryption key to %s", key)
 	return nil
 }
 

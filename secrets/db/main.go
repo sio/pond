@@ -40,7 +40,6 @@ func Open(filename string, key ssh.Signer) (*Database, error) {
 	}
 	err = db.verifyEncryptionKey()
 	if errors.Is(err, errKeyNotDefined) {
-		log.Printf("IMPORTANT: setting encryption key to %s", string(ssh.MarshalAuthorizedKey(key.PublicKey())))
 		err = db.setEncryptionKey()
 		if err != nil {
 			return nil, err
