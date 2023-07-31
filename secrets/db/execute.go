@@ -43,6 +43,12 @@ func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Quer
 		for _, item := range items {
 			response.Send(item)
 		}
+	case "set/namespace":
+		var items []string
+		items, err = setNamespace(ctx, sql, query.Items)
+		for _, item := range items {
+			response.Send(item)
+		}
 	case "set/user":
 		var items []string
 		items, err = setUser(ctx, sql, query.Items)
