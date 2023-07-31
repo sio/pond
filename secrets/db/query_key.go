@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -10,14 +11,28 @@ type key struct {
 	Key  string
 }
 
-func (db *Database) setKey(ctx context.Context, k *key) error {
+func setKey(ctx context.Context, sql sqlable, payload *json.RawMessage) ([]string, error) {
+	var keys []key
+	err := json.Unmarshal(*payload, &keys)
+	if err != nil {
+		return nil, fmt.Errorf("json: %w", err)
+	}
 	const query = `
 		INSERT INTO key(user, key)
 		VALUES (?, ?)
 	`
-	_, err := db.sql.ExecContext(ctx, query, k.User, k.Key)
+	insert, err := sql.PrepareContext(ctx, query)
 	if err != nil {
-		return fmt.Errorf("insert into key: %w", err)
+		return nil, fmt.Errorf("compiling sql: %w", err)
 	}
-	return nil
+	defer insert.Close()
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		_, err := insert.ExecContext(ctx, k.User, k.Key)
+		if err != nil {
+			return nil, fmt.Errorf("writing key=%q: %w", k.Key, err)
+		}
+		out = append(out, k.Key)
+	}
+	return out, nil
 }
