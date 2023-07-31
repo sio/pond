@@ -31,6 +31,12 @@ func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Quer
 	}
 	target := fmt.Sprintf("%s/%s", query.Action, query.Namespace)
 	switch target {
+	case "set/access":
+		var items []access
+		items, err = setAccess(ctx, sql, query.Items)
+		for _, item := range items {
+			response.Send(item)
+		}
 	case "set/key":
 		var items []string
 		items, err = setKey(ctx, sql, query.Items)
