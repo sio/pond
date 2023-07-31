@@ -8,14 +8,14 @@ import (
 
 type MultiError []error
 
-func (m *MultiError) Add(e error) {
+func (m *MultiError) Error(e error) {
 	if e == nil {
 		return
 	}
 	*m = append(*m, e)
 }
 
-func (m *MultiError) Err() error {
+func (m *MultiError) Sum() error {
 	return errors.Join([]error(*m)...)
 }
 
@@ -32,5 +32,5 @@ func (m *MultiError) Errorf(format string, args ...any) {
 	if len(args) > 0 && countNotNil == 0 {
 		return
 	}
-	m.Add(fmt.Errorf(format, args...))
+	m.Error(fmt.Errorf(format, args...))
 }

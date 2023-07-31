@@ -145,7 +145,7 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 
 		var errs util.MultiError
 		resp, err := s.handleAPI(ctx, pubkey, endpoint, ch)
-		errs.Errorf("API handler: %w", err)
+		errs.Error(err)
 
 		_, err = ch.Write(resp)
 		errs.Errorf("writing to SSH channel: %w", err)
@@ -159,7 +159,7 @@ func (s *SecretServer) handleSSH(ctx context.Context, conn *ssh.ServerConn, chan
 		_, err = ch.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
 		errs.Errorf("sending exit-status: %w", err)
 
-		return errs.Err()
+		return errs.Sum()
 	}
 }
 
