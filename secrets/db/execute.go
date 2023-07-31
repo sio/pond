@@ -13,8 +13,8 @@ func (db *Database) Execute(ctx context.Context, pubkey string, query *Query) (*
 func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Query) (*Response, error) {
 	var response = new(Response)
 	if !db.isAdmin(pubkey) {
-		response.Errorf("permission denied")
-		return response, fmt.Errorf("administrative access denied: %s", pubkey)
+		response.Errorf("access denied")
+		return response, fmt.Errorf("access denied: %s", pubkey)
 	}
 	var err error
 	var tx *sql.Tx
