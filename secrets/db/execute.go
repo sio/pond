@@ -64,7 +64,6 @@ func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Quer
 	default:
 		response.Errorf("not implemented: %s", target)
 		return response, response.LastError()
-		fmt.Println(sql)
 	}
 	if err != nil {
 		response.Errorf("%s: error. More information in logs", target)
