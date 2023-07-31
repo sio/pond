@@ -27,6 +27,10 @@ const (
 	maxQueryBytes = 20 * 1024
 )
 
+var (
+	apiOK = errors.New("OK")
+)
+
 // Prepare reply to API client
 func (s *SecretServer) handleAPI(ctx context.Context, pubkey, endpoint string, body io.Reader) ([]byte, error) {
 	var errs []error
@@ -81,11 +85,15 @@ func (s *SecretServer) queryAPI(ctx context.Context, pubkey, endpoint string, bo
 	}
 	switch endpoint {
 	case defaultEndpoint:
-		return s.db.Execute(ctx, pubkey, query)
+		response, err = s.db.Execute(ctx, pubkey, query)
 	case "admin":
-		return s.db.ExecuteAdmin(ctx, pubkey, query)
+		response, err = s.db.ExecuteAdmin(ctx, pubkey, query)
 	default:
 		response.Errorf("invalid endpoint: %q", endpoint)
-		return response, response.LastError()
+		err = response.LastError()
 	}
+	if err == nil {
+		err = apiOK
+	}
+	return response, fmt.Errorf("%s/%s/%s: %w", endpoint, query.Action, query.Namespace, err)
 }
