@@ -43,13 +43,19 @@ func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Quer
 		for _, item := range items {
 			response.Send(item)
 		}
+	case "set/usergroup":
+		var items []usergroup
+		items, err = setUsergroup(ctx, sql, query.Items)
+		for _, item := range items {
+			response.Send(item)
+		}
 	default:
 		response.Errorf("not implemented: %s", target)
 		return response, response.LastError()
 		fmt.Println(sql)
 	}
 	if err != nil {
-		response.Errorf("%s: error", target)
+		response.Errorf("%s: error. More information in logs", target)
 		return response, fmt.Errorf("%s: %w", target, err)
 	}
 	if tx != nil {
