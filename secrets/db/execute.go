@@ -7,7 +7,43 @@ import (
 )
 
 func (db *Database) Execute(ctx context.Context, pubkey string, query *Query) (*Response, error) {
-	return nil, nil
+	var response = new(Response)
+	var err error
+	var tx *sql.Tx
+	var sql sqlable
+	sql = db.sql
+	if query.Action == Set || query.Action == Delete {
+		tx, err = db.sql.Begin()
+		if err != nil {
+			response.Errorf("database error")
+			return response, fmt.Errorf("begin transaction: %w", err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		sql = tx
+	}
+	switch query.Action {
+	case Set:
+		var items []string
+		items, err = setSecret(ctx, sql, db.key, pubkey, query)
+		for _, item := range items {
+			response.Send(item)
+		}
+	default:
+		response.Errorf("invalid action: %s", query.Action)
+		return response, response.LastError()
+	}
+	if err != nil {
+		response.Errorf("%s: error. Contact administrator for more information", query.Action)
+		return response, fmt.Errorf("%s: %w", query.Action, err)
+	}
+	if tx != nil {
+		err = tx.Commit()
+		if err != nil {
+			response.Errorf("database error")
+			return response, fmt.Errorf("commit transaction: %w", err)
+		}
+	}
+	return response, nil
 }
 
 func (db *Database) ExecuteAdmin(ctx context.Context, pubkey string, query *Query) (*Response, error) {
