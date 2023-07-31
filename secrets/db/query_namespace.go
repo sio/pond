@@ -7,8 +7,8 @@ import (
 )
 
 type namespace struct {
-	Namespace      string `json:"namespace"`
-	DefaultAccess      string `json:"default_access"`
+	Namespace     string `json:"namespace"`
+	DefaultAccess string `json:"default_access"`
 }
 
 func setNamespace(ctx context.Context, sql sqlable, payload *json.RawMessage) (changed []string, err error) {

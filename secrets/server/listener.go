@@ -26,20 +26,24 @@ func New(publicKeyPath, databasePath string) (*SecretServer, error) {
 	if err != nil {
 		return nil, err
 	}
+	db, err := db.Open(databasePath, agent)
+	if err != nil {
+		return nil, err
+	}
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(conn ssh.ConnMetadata, pubkey ssh.PublicKey) (*ssh.Permissions, error) {
+			keyText := util.KeyText(pubkey)
+			if err := db.AllowAPI(keyText); err != nil {
+				return nil, err
+			}
 			return &ssh.Permissions{
 				Extensions: map[string]string{
-					"pubkey": util.KeyText(pubkey),
+					"pubkey": keyText,
 				},
 			}, nil
 		},
 	}
 	config.AddHostKey(agent)
-	db, err := db.Open(databasePath, agent)
-	if err != nil {
-		return nil, err
-	}
 	return &SecretServer{
 		config: config,
 		db:     db,
@@ -107,7 +111,7 @@ func (s *SecretServer) handleTCP(ctx context.Context, tcp net.Conn) {
 	}
 	conn, chans, reqs, err := ssh.NewServerConn(tcp, s.config)
 	if err != nil {
-		log.Printf("SSH handshake from %s: %v", tcp.RemoteAddr(), err)
+		log.Printf("Deny SSH from %s: %v", tcp.RemoteAddr(), err)
 		return
 	}
 	defer conn.Close()

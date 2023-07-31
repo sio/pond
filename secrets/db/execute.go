@@ -91,6 +91,29 @@ func (db *Database) isAdmin(pubkey string) bool {
 	return result
 }
 
+// Check if a client is allowed to interact with our API
+//
+// The goal is to drop unauthorized connections (bots, skiddies, random
+// lurkers) as early as possible as cheap as possible.
+// Role based access control is evaluated much later, when we receive full API
+// query and pass it to API endpoint.
+//
+// This is a very crude check: we compare client's public key against the list
+// of all known keys and deny access if we find no matching records.
+func (db *Database) AllowAPI(pubkey string) error {
+	const query = `SELECT count(key) > 0 FROM key WHERE key = ?`
+	row := db.sql.QueryRow(query, pubkey)
+	var known bool
+	err := row.Scan(&known)
+	if err != nil {
+		return err
+	}
+	if !known {
+		return fmt.Errorf("not a known key: %s", pubkey)
+	}
+	return nil
+}
+
 // Common subset of sql.DB and sql.Tx methods used in this package
 type sqlable interface {
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
