@@ -14,3 +14,9 @@
 ## Lowest priority
 
 - Try failure mode: ssh-agent dies on server and/or gets restarted
+- Limit accepted public key algorithms. Should we? RSA pubkeys are pretty
+  long, and we store them in database. Does this have any impact on
+  performance.
+  Even when not accepted, full public keys are written into logs - can this be
+  used for denial of service? May be we should just send less data into logs,
+  e.g. a fingerprint instead of the full key.
