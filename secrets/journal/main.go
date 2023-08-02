@@ -102,39 +102,39 @@ func New(rw io.ReadWriter, s ssh.Signer) (*Journal, error) {
 }
 
 // Schedule a function to be called upon Journal.Close()
-func (a *Journal) Defer(f func()) {
-	a.cleanup = append(a.cleanup, f)
+func (j *Journal) Defer(f func()) {
+	j.cleanup = append(j.cleanup, f)
 }
 
 // Execute all scheduled cleanup functions in reverse chronological order
-func (a *Journal) Close() {
-	for i := len(a.cleanup) - 1; i >= 0; i-- {
-		a.cleanup[i]()
+func (j *Journal) Close() {
+	for i := len(j.cleanup) - 1; i >= 0; i-- {
+		j.cleanup[i]()
 	}
-	a.closed = true
+	j.closed = true
 }
 
 // Append a message to journal
-func (a *Journal) Append(m *Message) error {
-	if a.closed {
+func (j *Journal) Append(m *Message) error {
+	if j.closed {
 		return errors.New("writing to a closed journal")
 	}
-	a.write.Lock()
-	defer a.write.Unlock()
+	j.write.Lock()
+	defer j.write.Unlock()
 	items, err := json.Marshal(m.Items)
 	if err != nil {
 		return fmt.Errorf("json: %w", err)
 	}
-	timeOffset := m.Timestamp.Sub(a.ctime).Seconds()
+	timeOffset := m.Timestamp.Sub(j.ctime).Seconds()
 	var plaintext []byte
 	plaintext = binary.BigEndian.AppendUint32(nil, uint32(timeOffset))
 	plaintext = append(plaintext, byte(m.Action))
 	plaintext = append(plaintext, items...)
-	cipher, err := a.encrypt(plaintext)
+	cipher, err := j.encrypt(plaintext)
 	if err != nil {
 		return fmt.Errorf("journal encrypt: %w", err)
 	}
-	_, err = a.stream.Write(append(cipher, a.separator...))
+	_, err = j.stream.Write(append(cipher, j.separator...))
 	if err != nil {
 		return fmt.Errorf("journal write: %w", err)
 	}
@@ -142,7 +142,7 @@ func (a *Journal) Append(m *Message) error {
 }
 
 // Construct a message and append it to journal
-func (a *Journal) Message(action Verb, keyvals ...string) error {
+func (j *Journal) Message(action Verb, keyvals ...string) error {
 	if len(keyvals)%2 != 0 {
 		return errors.New("each key must be followed by a matching value")
 	}
@@ -153,7 +153,7 @@ func (a *Journal) Message(action Verb, keyvals ...string) error {
 			Value: keyvals[i+1],
 		}
 	}
-	return a.Append(&Message{
+	return j.Append(&Message{
 		Action:    action,
 		Items:     items,
 		Timestamp: time.Now(),
@@ -164,9 +164,9 @@ func (j *Journal) ready() bool {
 	return j.stream != nil && j.signer != nil
 }
 
-func (a *Journal) CatchUp() { // TODO
+func (j *Journal) CatchUp() { // TODO
 }
 
-func (a *Journal) Next() *Message { // TODO
+func (j *Journal) Next() *Message { // TODO
 	return nil
 }
