@@ -1,4 +1,4 @@
-package audit
+package journal
 
 import (
 	"encoding/binary"
@@ -13,11 +13,11 @@ import (
 
 // Securely store information about sequential events in a structured
 // (but schema-less) fashion
-type Log struct {
+type Journal struct {
 	// Input/output interface
 	stream io.ReadWriter
 
-	// Creation time of log file.
+	// Creation time of journal file.
 	// May or may not match the timestamp of the first message
 	ctime time.Time
 
@@ -27,7 +27,7 @@ type Log struct {
 	// Ensure thread safety of i/o operations
 	write sync.Mutex
 
-	// Never reuse closed Log
+	// Never reuse closed Journal
 	closed bool
 
 	// Plain text message separator
@@ -37,17 +37,17 @@ type Log struct {
 	state []byte
 }
 
-// Open audit log based on a file
+// Open file based journal
 //
 // Exclusive filesystem lock is automatically acquired.
 // File will be created if not exists.
-func Open(filename string) (*Log, error) {
+func Open(filename string) (*Journal, error) {
 	lock := new(lockfile)
 	err := lock.TryLock(filename + ".lock")
 	if err != nil {
 		return nil, err
 	}
-	fail := func(format string, a ...any) (*Log, error) {
+	fail := func(format string, a ...any) (*Journal, error) {
 		lock.Unlock()
 		return nil, fmt.Errorf(format, a...)
 	}
@@ -56,53 +56,54 @@ func Open(filename string) (*Log, error) {
 	if err != nil {
 		return fail("open: %w", err)
 	}
-	log, err := New(file)
+	jrn, err := New(file)
 	if err != nil {
 		_ = file.Close()
 		return fail("%w", err)
 	}
-	log.Defer(func() { _ = file.Close() })
-	log.Defer(lock.Unlock)
-	return log, nil
+	jrn.Defer(func() { _ = file.Close() })
+	jrn.Defer(lock.Unlock)
+	return jrn, nil
 }
 
-// Use provided data stream for audit log
+// Use provided data stream for journal
 //
-// If provided stream implements io.Seeker interface log will automatically
+// If provided stream implements io.Seeker interface journal will automatically
 // jump to the start of the stream. Otherwise it is assumed that current
 // position is already at the start of the stream.
 //
 // Exclusive access to underlying writer is assumed. Caller must handle locking
 // on their own. For simple file-based logs use Open function which handles
 // locking automatically.
-func New(rw io.ReadWriter) (*Log, error) {
+func New(rw io.ReadWriter) (*Journal, error) {
 	if seeker, ok := rw.(io.Seeker); ok {
 		_, err := seeker.Seek(0, io.SeekStart)
 		if err != nil {
 			return nil, fmt.Errorf("seek(0): %w", err)
 		}
 	}
-	log := &Log{stream: rw}
-	return log, nil
+	jrn := &Journal{stream: rw}
+	// TODO: parse header and initialize Journal struct here
+	return jrn, nil
 }
 
-// Schedule a function to be called upon Log.Close()
-func (a *Log) Defer(f func()) {
+// Schedule a function to be called upon Journal.Close()
+func (a *Journal) Defer(f func()) {
 	a.cleanup = append(a.cleanup, f)
 }
 
 // Execute all scheduled cleanup functions in reverse chronological order
-func (a *Log) Close() {
+func (a *Journal) Close() {
 	for i := len(a.cleanup) - 1; i >= 0; i-- {
 		a.cleanup[i]()
 	}
 	a.closed = true
 }
 
-// Append a message to audit log
-func (a *Log) Append(m *Message) error {
+// Append a message to journal
+func (a *Journal) Append(m *Message) error {
 	if a.closed {
-		return errors.New("writing to a closed log")
+		return errors.New("writing to a closed journal")
 	}
 	a.write.Lock()
 	defer a.write.Unlock()
@@ -117,17 +118,17 @@ func (a *Log) Append(m *Message) error {
 	plaintext = append(plaintext, items...)
 	cipher, err := a.encrypt(plaintext)
 	if err != nil {
-		return fmt.Errorf("log encrypt: %w", err)
+		return fmt.Errorf("journal encrypt: %w", err)
 	}
 	_, err = a.stream.Write(append(cipher, a.separator...))
 	if err != nil {
-		return fmt.Errorf("log write: %w", err)
+		return fmt.Errorf("journal write: %w", err)
 	}
 	return nil
 }
 
-// Construct a message and append it to audit log
-func (a *Log) Message(action Verb, keyvals ...string) error {
+// Construct a message and append it to journal
+func (a *Journal) Message(action Verb, keyvals ...string) error {
 	if len(keyvals)%2 != 0 {
 		return errors.New("each key must be followed by a matching value")
 	}
@@ -145,9 +146,9 @@ func (a *Log) Message(action Verb, keyvals ...string) error {
 	})
 }
 
-func (a *Log) CatchUp() { // TODO
+func (a *Journal) CatchUp() { // TODO
 }
 
-func (a *Log) Next() *Message { // TODO
+func (a *Journal) Next() *Message { // TODO
 	return nil
 }

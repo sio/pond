@@ -1,4 +1,4 @@
-package audit
+package journal
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Message struct {
+type Message struct { // TODO: add sequential message id!
 	Timestamp time.Time
 	Action    Verb
 	Items     []Item

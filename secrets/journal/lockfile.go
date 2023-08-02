@@ -1,4 +1,4 @@
-package audit
+package journal
 
 import (
 	"fmt"
