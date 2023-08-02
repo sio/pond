@@ -9,6 +9,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // Securely store information about sequential events in a structured
@@ -17,9 +19,15 @@ type Journal struct {
 	// Input/output interface
 	stream io.ReadWriter
 
-	// Creation time of journal file.
-	// May or may not match the timestamp of the first message
-	ctime time.Time
+	// Private key interface
+	signer ssh.Signer
+
+	// Header metadata
+	version string
+	ctime   time.Time
+
+	// Current iteration state
+	state []byte
 
 	// List of cleanup functions
 	cleanup []func()
@@ -32,16 +40,13 @@ type Journal struct {
 
 	// Plain text message separator
 	separator []byte
-
-	// Current iteration state
-	state []byte
 }
 
 // Open file based journal
 //
 // Exclusive filesystem lock is automatically acquired.
 // File will be created if not exists.
-func Open(filename string) (*Journal, error) {
+func Open(filename string, signer ssh.Signer) (*Journal, error) {
 	lock := new(lockfile)
 	err := lock.TryLock(filename + ".lock")
 	if err != nil {
@@ -56,7 +61,7 @@ func Open(filename string) (*Journal, error) {
 	if err != nil {
 		return fail("open: %w", err)
 	}
-	jrn, err := New(file)
+	jrn, err := New(file, signer)
 	if err != nil {
 		_ = file.Close()
 		return fail("%w", err)
@@ -75,15 +80,24 @@ func Open(filename string) (*Journal, error) {
 // Exclusive access to underlying writer is assumed. Caller must handle locking
 // on their own. For simple file-based logs use Open function which handles
 // locking automatically.
-func New(rw io.ReadWriter) (*Journal, error) {
+func New(rw io.ReadWriter, s ssh.Signer) (*Journal, error) {
 	if seeker, ok := rw.(io.Seeker); ok {
 		_, err := seeker.Seek(0, io.SeekStart)
 		if err != nil {
 			return nil, fmt.Errorf("seek(0): %w", err)
 		}
 	}
-	jrn := &Journal{stream: rw}
-	// TODO: parse header and initialize Journal struct here
+	jrn := &Journal{
+		stream: rw,
+		signer: s,
+	}
+	err := jrn.parseHeader()
+	if errors.Is(err, errEmptyStream) {
+		err = jrn.writeHeader()
+	}
+	if err != nil {
+		return nil, err
+	}
 	return jrn, nil
 }
 
@@ -144,6 +158,10 @@ func (a *Journal) Message(action Verb, keyvals ...string) error {
 		Items:     items,
 		Timestamp: time.Now(),
 	})
+}
+
+func (j *Journal) ready() bool {
+	return j.stream != nil && j.signer != nil
 }
 
 func (a *Journal) CatchUp() { // TODO
