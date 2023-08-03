@@ -1,7 +1,6 @@
 package journal
 
 import (
-	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -69,23 +68,47 @@ func (j *Journal) v1WriteHeader() error {
 
 func (j *Journal) v1ParseHeader() error {
 	var fields [v1HeaderFieldCount]string
-	var scanner = bufio.NewScanner(j.stream)
 	for i := 0; i < len(fields); i++ {
-		if scanner.Scan() {
-			fields[i] = scanner.Text()
-			continue
-		}
-		if scanner.Err() != nil {
-			return fmt.Errorf("failed to parse field %d: %w", i+1, scanner.Err())
-		}
-		if i == 0 {
+		fragment, err := readBytes(j.stream, byte('\n'))
+		if errors.Is(err, io.EOF) && i == 0 && len(fragment) == 0 {
 			return errEmptyStream
 		}
-		return fmt.Errorf("unexpected end of stream at field %d/%d", i+1, len(fields))
+		if err != nil {
+			return fmt.Errorf("reading header: %w", err)
+		}
+		fields[i] = string(fragment[:len(fragment)-1])
 	}
 	var h v1Header
 	h.FromStrings(fields)
 	return j.v1InitializeJournal(&h)
+}
+
+// Similar to bufio.Reader.ReadBytes, this function reads until the first
+// occurence of delim in input and returns a slice containing the data up to
+// and including the delimiter.
+//
+// Unlike bufio.Reader and bufio.Scanner this function never advances the
+// reader past the position of delimiter.
+//
+// Reading bytes one by one has a significant performance penalty which is
+// acceptable only for short data streams. Use bufio.Reader or bufio.Scanner if
+// need better performance.
+func readBytes(r io.Reader, delim byte) ([]byte, error) {
+	const growBytes = 1024
+	var output []byte
+	for i := 0; true; i++ {
+		if i > len(output)-1 {
+			output = append(output, make([]byte, growBytes)...)
+		}
+		_, err := r.Read(output[i : i+1])
+		if err != nil {
+			return nil, err
+		}
+		if output[i] == delim {
+			return output[:i+1], nil
+		}
+	}
+	return nil, fmt.Errorf("impossible branching")
 }
 
 func (j *Journal) v1InitializeJournal(h *v1Header) error {
@@ -93,10 +116,10 @@ func (j *Journal) v1InitializeJournal(h *v1Header) error {
 
 	// Magic values
 	if h.Application != applicationTag {
-		return fmt.Errorf("unexpected application tag: %s", h.Application)
+		return fmt.Errorf("unexpected application tag: %q", h.Application)
 	}
 	if h.Version != v1 {
-		return fmt.Errorf("unsupported journal version: %s", h.Version)
+		return fmt.Errorf("unsupported journal version: %q", h.Version)
 	}
 	j.version = h.Version
 
@@ -132,7 +155,7 @@ func (j *Journal) v1InitializeJournal(h *v1Header) error {
 		return fmt.Errorf("nonce: %w", err)
 	}
 	if len(nonce) != v1NonceBytes {
-		return fmt.Errorf("invalid nonce length for journal %s: %d instead of %d", j.version, len(nonce), v1NonceBytes)
+		return fmt.Errorf("invalid nonce length for %s: %d instead of %d", j.version, len(nonce), v1NonceBytes)
 	}
 	signature, err = j.signer.Sign(rand.Reader, h.Bytes())
 	if err != nil {
