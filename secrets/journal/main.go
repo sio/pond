@@ -33,7 +33,7 @@ type Journal struct {
 	cleanup []func()
 
 	// Ensure thread safety of i/o operations
-	write sync.Mutex
+	lock sync.Mutex
 
 	// Never reuse closed Journal
 	closed bool
@@ -119,8 +119,8 @@ func (j *Journal) Append(m *Message) error {
 	if j.closed {
 		return errors.New("writing to a closed journal")
 	}
-	j.write.Lock()
-	defer j.write.Unlock()
+	j.lock.Lock()
+	defer j.lock.Unlock()
 	items, err := json.Marshal(m.Items)
 	if err != nil {
 		return fmt.Errorf("json: %w", err)

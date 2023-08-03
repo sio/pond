@@ -22,8 +22,8 @@ const (
 	v1                 = "JOURNAL VERSION 1"
 	v1NonceBytes       = 24
 	v1KeyBytes         = 32
-	v1HeaderFieldCount = 5
 	v1SeparatorBytes   = 4
+	v1HeaderFieldCount = 5
 )
 
 var (
@@ -141,7 +141,9 @@ func (j *Journal) v1InitializeJournal(h *v1Header) error {
 	if len(signature.Blob) < 64 {
 		return fmt.Errorf("signature is too short: %d bytes instead of at least 64", len(signature.Blob))
 	}
-	key := argon2.IDKey(signature.Blob[:32], signature.Blob[32:], 1, 64*1024, 4, v1KeyBytes+v1SeparatorBytes)
+	var derived, key []byte
+	derived = argon2.IDKey(signature.Blob[:32], signature.Blob[32:], 1, 64*1024, 4, v1KeyBytes+v1SeparatorBytes)
+	j.separator, key = derived[:v1SeparatorBytes], derived[v1SeparatorBytes:]
 	j.state = append(nonce, key...)
 	return nil
 }
