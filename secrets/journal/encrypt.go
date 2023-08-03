@@ -77,7 +77,7 @@ func (j *Journal) v1Decrypt(cipher []byte) (plain []byte, err error) {
 	}
 	message, ok := secretbox.Open(nil, cipher, cursor.Nonce(), cursor.Key())
 	if !ok {
-		return nil, fmt.Errorf("secretbox decryption failed")
+		return nil, fmt.Errorf("secretbox decryption failed [%d bytes]", len(cipher))
 	}
 	nextNonce := sha256.Sum256(message)
 	cursor.SetNonce(nextNonce[:])

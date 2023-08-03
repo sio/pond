@@ -1,8 +1,8 @@
 package journal
 
 import (
-	"encoding/binary"
-	"encoding/json"
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -16,30 +16,21 @@ import (
 // Securely store information about sequential events in a structured
 // (but schema-less) fashion
 type Journal struct {
-	// Input/output interface
+	// Data
 	stream io.ReadWriter
-
-	// Private key interface
 	signer ssh.Signer
 
-	// Header metadata
+	// Metadata
 	version string
 	ctime   time.Time
 
-	// Current iteration state
-	state []byte
-
-	// List of cleanup functions
-	cleanup []func()
-
-	// Ensure thread safety of i/o operations
-	lock sync.Mutex
-
-	// Never reuse closed Journal
-	closed bool
-
-	// Plain text message separator
+	// State
+	state     []byte
 	separator []byte
+	scanner   *bufio.Scanner
+	lock      sync.Mutex
+	closed    bool
+	cleanup   []func()
 }
 
 // Open file based journal
@@ -121,15 +112,10 @@ func (j *Journal) Append(m *Message) error {
 	}
 	j.lock.Lock()
 	defer j.lock.Unlock()
-	items, err := json.Marshal(m.Items)
+	plaintext, err := m.Encode(j.ctime)
 	if err != nil {
-		return fmt.Errorf("json: %w", err)
+		return fmt.Errorf("message serialization: %w", err)
 	}
-	timeOffset := m.Timestamp.Sub(j.ctime).Seconds()
-	var plaintext []byte
-	plaintext = binary.BigEndian.AppendUint32(nil, uint32(timeOffset))
-	plaintext = append(plaintext, byte(m.Action))
-	plaintext = append(plaintext, items...)
 	cipher, err := j.encrypt(plaintext)
 	if err != nil {
 		return fmt.Errorf("journal encrypt: %w", err)
@@ -164,9 +150,75 @@ func (j *Journal) ready() bool {
 	return j.stream != nil && j.signer != nil
 }
 
-func (j *Journal) CatchUp() { // TODO
+// Read all messages until the end of journal without returning their contents
+func (j *Journal) CatchUp() error {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	var err error
+	var count uint
+	for err == nil {
+		_, err = j.fetchNext()
+		count++
+	}
+	if errors.Is(err, io.EOF) {
+		return nil
+	}
+	return fmt.Errorf("catching up with journal, entry %d: %w", count, err)
 }
 
-func (j *Journal) Next() *Message { // TODO
-	return nil
+// Read the next message in journal. Returns io.EOF after the last message.
+func (j *Journal) Next() (*Message, error) {
+	j.lock.Lock()
+	defer j.lock.Unlock()
+	return j.fetchNext()
+}
+
+// Fetch next message without locking the journal. Use with caution!
+func (j *Journal) fetchNext() (*Message, error) {
+	if !j.ready() {
+		return nil, fmt.Errorf("can not read from uninitialized journal")
+	}
+	if len(j.state) == 0 || len(j.separator) == 0 {
+		return nil, fmt.Errorf("can not read messages before parsing header")
+	}
+	if j.scanner == nil {
+		j.scanner = bufio.NewScanner(j.stream)
+		j.scanner.Split(j.splitFunc)
+	}
+	if !j.scanner.Scan() {
+		err := j.scanner.Err()
+		if err == nil {
+			err = io.EOF
+		}
+		return nil, err
+	}
+	cipher := j.scanner.Bytes()
+	if len(cipher) == 0 {
+		return j.fetchNext()
+	}
+	plain, err := j.decrypt(cipher)
+	if err != nil {
+		return nil, err
+	}
+	var message Message
+	err = message.Decode(plain, j.ctime)
+	if err != nil {
+		return nil, err
+	}
+	return &message, nil
+}
+
+// bufio.SplitFunc for reading journal messages
+func (j *Journal) splitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	token, _, found := bytes.Cut(data, j.separator)
+	if len(token) == 0 {
+		token = nil
+	}
+	if atEOF {
+		err = bufio.ErrFinalToken
+	}
+	if found {
+		return len(token) + len(j.separator), token, err
+	}
+	return len(token), token, err
 }

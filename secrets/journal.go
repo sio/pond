@@ -10,12 +10,23 @@ import (
 func main() {
 	k, e := crypto.LocalKey(`tests\keys\storage`)
 	if e != nil {
-		log.Fatal(e)
+		log.Println(e)
+		return
 	}
 	a, e := journal.Open(`C:\Temp\journal.log`, k)
 	if e != nil {
-		log.Fatal(e)
+		log.Println(e)
+		return
 	}
 	defer a.Close()
-	a.Message(journal.Add, "hello", "world")
+	e = a.CatchUp()
+	if e != nil {
+		log.Println(e)
+		return
+	}
+	e = a.Message(journal.Add, "hello", "world")
+	if e != nil {
+		log.Println(e)
+		return
+	}
 }
