@@ -108,7 +108,7 @@ func readBytes(r io.Reader, delim byte) ([]byte, error) {
 			return output[:i+1], nil
 		}
 	}
-	return nil, fmt.Errorf("impossible branching")
+	panic("impossible branching")
 }
 
 func (j *Journal) v1InitializeJournal(h *v1Header) error {
