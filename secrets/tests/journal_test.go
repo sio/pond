@@ -23,12 +23,12 @@ func BenchmarkJournalWrite(b *testing.B) {
 		maxLen = 10
 		word   = "HelloWorldFooBar\r\n!!"
 	)
+	elements := make([]string, maxLen)
+	for e := 0; e < len(elements); e++ {
+		elements[e] = word
+	}
 	for i := 0; i < b.N; i++ {
-		elements := make([]string, i%(maxLen-1)+1)
-		for e := 0; e < len(elements); e++ {
-			elements[e] = word
-		}
-		err := j.Message(journal.Add, elements...)
+		err := j.Message(journal.Add, elements[:i%(maxLen-1)+1]...)
 		if err != nil {
 			b.Fatal(err)
 		}
