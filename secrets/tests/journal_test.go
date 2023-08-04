@@ -12,6 +12,29 @@ import (
 	"path/filepath"
 )
 
+func BenchmarkJournalWrite(b *testing.B) {
+	j, err := setupJournal()
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer j.Cleanup()
+
+	const (
+		maxLen = 10
+		word   = "HelloWorldFooBar\r\n!!"
+	)
+	for i := 0; i < b.N; i++ {
+		elements := make([]string, i%(maxLen-1)+1)
+		for e := 0; e < len(elements); e++ {
+			elements[e] = word
+		}
+		err := j.Message(journal.Add, elements...)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestJournalWrite(t *testing.T) {
 	j, err := setupJournal()
 	if err != nil {
