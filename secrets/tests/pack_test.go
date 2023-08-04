@@ -53,7 +53,7 @@ func FuzzPacking(f *testing.F) {
 			}
 			var overhead int = -1
 			if total != 0 {
-				overhead = (len(encoded)-total)*100/total
+				overhead = (len(encoded) - total) * 100 / total
 			}
 			t.Logf(
 				"input: %d strings, total %d bytes; output: %d bytes; overhead %d bytes (%d%%)",
