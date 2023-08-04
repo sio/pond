@@ -40,7 +40,7 @@ func (lock *lockfile) TryLock(filename string) error {
 		file: file,
 		path: filename,
 	}
-	_, err = fmt.Fprintf(file, "Locked by PID %s at %s\n", os.Getpid(), time.Now())
+	_, err = fmt.Fprintf(file, "Locked by PID %d at %s\n", os.Getpid(), time.Now())
 	if err != nil {
 		lock.Unlock()
 		return fmt.Errorf("write to lock file: %w", err)
