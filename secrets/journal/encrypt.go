@@ -16,7 +16,7 @@ func (j *Journal) encrypt(plain []byte) (cipher []byte, err error) {
 	case v1:
 		return j.v1Encrypt(plain)
 	default:
-		return nil, fmt.Errorf("unsupported journal version: %s", j.version)
+		return nil, fmt.Errorf("unsupported journal version: %q", j.version)
 	}
 }
 
@@ -25,7 +25,7 @@ func (j *Journal) decrypt(cipher []byte) (plain []byte, err error) {
 	case v1:
 		return j.v1Decrypt(cipher)
 	default:
-		return nil, fmt.Errorf("unsupported journal version: %s", j.version)
+		return nil, fmt.Errorf("unsupported journal version: %q", j.version)
 	}
 }
 
