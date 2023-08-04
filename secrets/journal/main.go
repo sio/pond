@@ -99,6 +99,9 @@ func (j *Journal) Defer(f func()) {
 
 // Execute all scheduled cleanup functions in reverse chronological order
 func (j *Journal) Close() {
+	if j.closed {
+		return
+	}
 	for i := len(j.cleanup) - 1; i >= 0; i-- {
 		j.cleanup[i]()
 	}
@@ -112,6 +115,10 @@ func (j *Journal) Append(m *Message) error {
 	}
 	j.lock.Lock()
 	defer j.lock.Unlock()
+	var err error
+	if err = j.catchup(); err != nil {
+		return err
+	}
 	plaintext, err := m.Encode(j.ctime)
 	if err != nil {
 		return fmt.Errorf("message serialization: %w", err)
@@ -128,20 +135,10 @@ func (j *Journal) Append(m *Message) error {
 }
 
 // Construct a message and append it to journal
-func (j *Journal) Message(action Verb, keyvals ...string) error {
-	if len(keyvals)%2 != 0 {
-		return errors.New("each key must be followed by a matching value")
-	}
-	var items = make([]Item, len(keyvals)/2)
-	for i := 0; i < len(keyvals); i += 2 {
-		items[i/2] = Item{
-			Name:  keyvals[i],
-			Value: keyvals[i+1],
-		}
-	}
+func (j *Journal) Message(action Verb, elements ...string) error {
 	return j.Append(&Message{
 		Action:    action,
-		Items:     items,
+		Elements:  elements,
 		Timestamp: time.Now(),
 	})
 }
@@ -151,9 +148,7 @@ func (j *Journal) ready() bool {
 }
 
 // Read all messages until the end of journal without returning their contents
-func (j *Journal) CatchUp() error {
-	j.lock.Lock()
-	defer j.lock.Unlock()
+func (j *Journal) catchup() error {
 	var err error
 	var count uint
 	for err == nil {
