@@ -12,7 +12,12 @@ import (
 )
 
 func (j *Journal) encrypt(plain []byte) (cipher []byte, err error) {
-	return j.v1Encrypt(plain)
+	switch j.version {
+	case v1:
+		return j.v1Encrypt(plain)
+	default:
+		return nil, fmt.Errorf("unsupported journal version: %s", j.version)
+	}
 }
 
 func (j *Journal) decrypt(cipher []byte) (plain []byte, err error) {
