@@ -12,13 +12,24 @@ func Encode(s []string) ([]byte, error) {
 	var buf bytes.Buffer
 
 	// First we write the number of elements in the slice
+	if len(s) > utf8.MaxRune {
+		return nil, fmt.Errorf("input too long: %d elements; max allowed: %d", len(s), utf8.MaxRune)
+	}
 	_, err = buf.Write(Uint(len(s)).Bytes())
 	if err != nil {
 		return nil, err
 	}
 
 	// Then size of each element
-	for _, elem := range s {
+	for index, elem := range s {
+		if len(elem) > utf8.MaxRune {
+			return nil, fmt.Errorf(
+				"element %d is too large: %d bytes; max allowed: %d",
+				index,
+				len(elem),
+				utf8.MaxRune,
+			)
+		}
 		_, err = buf.Write(Uint(len(elem)).Bytes())
 		if err != nil {
 			return nil, err
