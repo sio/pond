@@ -17,6 +17,8 @@ func FuzzEncrypt(f *testing.F) {
 
 	f.Add("test-secret-value", "test-namespace", 3)
 	f.Add("test-another-value", "test-namespace-new", 1)
+	f.Add("0", "0", 99)
+	f.Add("", "0", -41)
 
 	const maxKeywords = 50
 	var secret crypto.SecretValue
