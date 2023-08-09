@@ -1,5 +1,12 @@
 # pond/secrets: TODO list
 
+## Medium priority
+
+- Review and document seed entropy size in all cryptographic operations to avoid
+  mistakes similar to [Milk Sad] vulnerability
+
+[Milk Sad]: https://news.ycombinator.com/item?id=37054862
+
 ## Low priority
 
 - Make use of context.Context:
