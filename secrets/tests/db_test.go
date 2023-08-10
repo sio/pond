@@ -55,7 +55,14 @@ func TestReadWriteDB(t *testing.T) {
 	for idx, tt := range tests {
 		value, err := db.Get(ctx, tt.path)
 		if err != nil {
-			t.Fatalf("reading value #%d: %v", idx, err)
+			t.Errorf("reading value #%d: %v", idx, err)
+			meta, err := db.GetMetadata(ctx, tt.path)
+			if err != nil {
+				t.Errorf("reading metadata #%d: %v", idx, err)
+			} else if meta.Expired() {
+				t.Errorf("path #%d expired: %v", idx, tt.path)
+			}
+			continue
 		}
 		if string(value) != tt.value {
 			t.Fatalf("value has changed:\nwant: %s\n got: %s", tt.value, string(value))
