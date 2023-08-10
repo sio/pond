@@ -35,10 +35,6 @@ func BenchmarkSecurePath(b *testing.B) {
 		if len(secure) == 0 {
 			b.Fatal("empty secure path")
 		}
-		if i < len(outputs) {
-			outputs[index] = make([]byte, len(secure))
-			copy(outputs[index], secure)
-		}
 		if !bytes.Equal(outputs[index], secure) {
 			b.Fatalf("secure path mismatch (iteration=%d, index=%d)", i, index)
 		}
