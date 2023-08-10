@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -57,6 +58,24 @@ func Open(filename string, key ssh.Signer) (*DB, error) {
 	}
 	for i := 0; i < maxConcurrentTransactions; i++ {
 		db.txUnlock()
+	}
+	const schema = `
+		CREATE TABLE IF NOT EXISTS data(
+			path BLOB NOT NULL PRIMARY KEY,
+			value BLOB,
+			ctime INTEGER NOT NULL DEFAULT (unixepoch()),
+			mtime INTEGER NOT NULL DEFAULT (unixepoch()),
+			expires INTEGER NOT NULL DEFAULT (unixepoch())
+		);
+		CREATE TRIGGER IF NOT EXISTS mtime AFTER UPDATE ON data BEGIN
+			UPDATE data SET
+				mtime = unixepoch()
+			WHERE path = new.path;
+		END;
+	`
+	_, err = db.sql.Exec(schema)
+	if err != nil {
+		return nil, fmt.Errorf("applying sql schema: %w", err)
 	}
 	return db, nil
 }

@@ -11,7 +11,7 @@ const (
 	selectQuery = `
 		SELECT value
 		FROM data
-		WHERE path=? AND expires < unixepoch()
+		WHERE path=? AND expires > unixepoch()
 	`
 	upsertQuery = `
 		INSERT INTO data(path, value)
