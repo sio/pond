@@ -11,24 +11,20 @@ var (
 	magicSeparator = []byte{0, '\n', '\r', '\n', 0}
 )
 
-// Store sensitive value in encrypted form and decrypt on demand.
-// Original unencrypted value is never saved
-type SecretValue []byte
-
 // Encrypt sensitive value
-func (s *SecretValue) Encrypt(signer ssh.Signer, value string, keywords ...string) error {
-	return s.v1encrypt(signer, value, keywords...)
+func Encrypt(signer ssh.Signer, path []string, value []byte, deterministic bool) (cipher []byte, err error) {
+	return v1encrypt(signer, path, value, deterministic)
 }
 
 // Decrypt sensitive value
-func (s *SecretValue) Decrypt(signer ssh.Signer, keywords ...string) (string, error) {
-	if len(*s) == 0 {
-		return "", nil
+func Decrypt(signer ssh.Signer, path []string, cipher []byte) (value []byte, err error) {
+	if len(cipher) == 0 {
+		return nil, nil
 	}
-	switch (*s)[0] {
-	case 1:
-		return s.v1decrypt(signer, keywords...)
+	switch cipher[0] {
+	case v1tag:
+		return v1decrypt(signer, path, cipher)
 	default:
-		return "", fmt.Errorf("unsupported SecretValue version %d", (*s)[0])
+		return nil, fmt.Errorf("unsupported encryption version %d", cipher[0])
 	}
 }

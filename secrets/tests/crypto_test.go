@@ -21,7 +21,7 @@ func FuzzEncrypt(f *testing.F) {
 	f.Add("", "0", -41)
 
 	const maxKeywords = 50
-	var secret crypto.SecretValue
+	var cipher []byte
 	f.Fuzz(func(t *testing.T, value string, keyword string, repeat int) {
 		if repeat == 0 {
 			repeat = 1
@@ -34,16 +34,16 @@ func FuzzEncrypt(f *testing.F) {
 		for i := 0; i < repeat; i++ {
 			keywords[i] = keyword
 		}
-		err := secret.Encrypt(sign, value, keywords...)
+		cipher, err = crypto.Encrypt(sign, keywords, []byte(value), false)
 		if err != nil {
 			t.Fatal(err)
 		}
-		output, err := secret.Decrypt(sign, keywords...)
+		output, err := crypto.Decrypt(sign, keywords, cipher)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if output != value {
-			t.Fatalf("value got mangled during encryption: original=%q, modified=%q", value, output)
+		if string(output) != value {
+			t.Fatalf("value got mangled during encryption: original=%q, modified=%q", value, string(output))
 		}
 	})
 }

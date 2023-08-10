@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"crypto/rand"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"os"
@@ -22,9 +21,4 @@ func LocalKey(keyname string) (ssh.Signer, error) {
 		return nil, fmt.Errorf("%T can not be used for signatures: %w", key, err)
 	}
 	return private, nil
-}
-
-// Create cryptographic signature with default settings
-func Sign(s ssh.Signer, data []byte) (*ssh.Signature, error) {
-	return s.Sign(rand.Reader, data)
 }

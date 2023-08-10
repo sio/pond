@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,7 +30,7 @@ func TestReadingFromPython(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	challenge, err := Sign(signer, []byte(samplePath))
+	challenge, err := signer.Sign(rand.Reader, []byte(samplePath))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +43,7 @@ func TestReadingFromPython(t *testing.T) {
 	}
 	for index, sample := range collection.Samples {
 		t.Run(fmt.Sprint(index), func(t *testing.T) {
-			signature, _, err := v1signature(signer, sample.Keywords, sample.SignatureNonce)
+			signature, err := v1signature(signer, sample.Keywords, sample.SignatureNonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -51,7 +52,7 @@ func TestReadingFromPython(t *testing.T) {
 			} else {
 				t.Log("OK: signatures match")
 			}
-			key, _, err := v1kdf(signature, sample.KdfNonce)
+			key, err := v1kdf(signature, sample.KdfNonce)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,11 +61,11 @@ func TestReadingFromPython(t *testing.T) {
 			} else {
 				t.Log("OK: HKDF keys match")
 			}
-			decrypted, err := sample.Encrypted.Decrypt(signer, sample.Keywords...)
+			decrypted, err := Decrypt(signer, sample.Keywords, sample.Encrypted)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if decrypted != sample.Message {
+			if string(decrypted) != sample.Message {
 				t.Fatalf("mismatched decryption result: got %q, want %q", decrypted, sample.Message)
 			}
 		})
@@ -83,7 +84,7 @@ type Sample struct {
 	Signature      []byte
 	KdfNonce       []byte
 	Key            []byte
-	Encrypted      SecretValue
+	Encrypted      []byte
 }
 
 type sampleBase64 struct {
@@ -125,10 +126,9 @@ func (s *Sample) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to decode Key from base64: %w", err)
 	}
 
-	encrypted, err := base64.StdEncoding.DecodeString(temp.EncryptedBase64)
+	s.Encrypted, err = base64.StdEncoding.DecodeString(temp.EncryptedBase64)
 	if err != nil {
 		return fmt.Errorf("failed to decode Encrypted from base64: %w", err)
 	}
-	s.Encrypted = SecretValue(encrypted)
 	return nil
 }
