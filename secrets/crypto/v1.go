@@ -6,6 +6,7 @@ package crypto
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -27,9 +28,8 @@ const (
 )
 
 func v1encrypt(signer ssh.Signer, path []string, value []byte) (cipher []byte, err error) {
-	var nonce []byte
-	var nonceBytes = v1sshNonceBytes + v1kdfNonceBytes + v1boxNonceBytes + v1paddingMaxBytes
-	nonce, err = randomNonce(nonceBytes)
+	var nonce = make([]byte, v1sshNonceBytes+v1kdfNonceBytes+v1boxNonceBytes+v1paddingMaxBytes)
+	_, err = io.ReadFull(rand.Reader, nonce)
 	if err != nil {
 		return nil, fmt.Errorf("nonce generation: %w", err)
 	}
