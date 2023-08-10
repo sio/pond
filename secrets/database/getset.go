@@ -36,14 +36,14 @@ type sqli interface {
 }
 
 func (db *DB) get(ctx context.Context, engine sqli, path []string) (value []byte, err error) {
-	var cipherPath []byte
-	cipherPath, err = db.encryptPath(path)
+	var securePath []byte
+	securePath, err = db.securePath(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt path: %w", err)
+		return nil, fmt.Errorf("failed to derive secure path: %w", err)
 	}
 
 	var cipherValue []byte
-	err = engine.QueryRowContext(ctx, selectQuery, cipherPath).Scan(&cipherValue)
+	err = engine.QueryRowContext(ctx, selectQuery, securePath).Scan(&cipherValue)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -59,8 +59,8 @@ func (db *DB) get(ctx context.Context, engine sqli, path []string) (value []byte
 }
 
 func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte, overwrite bool) (err error) {
-	var cipherPath, cipherValue []byte
-	cipherPath, err = db.encryptPath(path)
+	var securePath, cipherValue []byte
+	securePath, err = db.securePath(path)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt path: %w", err)
 	}
@@ -72,7 +72,7 @@ func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte,
 	if !overwrite {
 		query = insertQuery
 	}
-	_, err = engine.ExecContext(ctx, query, cipherPath, cipherValue)
+	_, err = engine.ExecContext(ctx, query, securePath, cipherValue)
 	if err != nil {
 		return fmt.Errorf("sql insert: %w", err)
 	}
@@ -80,14 +80,14 @@ func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte,
 }
 
 func (db *DB) getmeta(ctx context.Context, engine sqli, path []string) (meta *Metadata, err error) {
-	var cipherPath []byte
-	cipherPath, err = db.encryptPath(path)
+	var securePath []byte
+	securePath, err = db.securePath(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt path: %w", err)
 	}
 
 	var ctime, mtime, expires int64
-	err = engine.QueryRowContext(ctx, metadataQuery, cipherPath).Scan(&ctime, &mtime, &expires)
+	err = engine.QueryRowContext(ctx, metadataQuery, securePath).Scan(&ctime, &mtime, &expires)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}

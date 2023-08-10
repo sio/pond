@@ -1,21 +1,53 @@
 package database
 
-// Even though we do not need to decrypt paths during normal database
-// operation, a hash function (or a signature) would not be enough.
+import (
+	"crypto/sha256"
+	"errors"
+	"fmt"
+	"golang.org/x/crypto/pbkdf2"
+
+	"secrets/pack"
+)
+
+// Path encryption is not reversible.
 //
-// Since we want all database lookups to require an encryption key, we also
-// must support key rotation. If we were to use only cryptographic signatures
-// for path storage (hash + asymmetric encryption), we would not be able to
-// re-sign the same path with a new key without fetching that path from
-// somewhere else first.
+// To be able to rekey the database after key rotation user has to keep a
+// journal of all existing paths somewhere outside the database
+// (see 'secrets/journal' package in this repo).
 //
-// This package is intended to be useful on its own (i.e. without 'journal'
-// package from the same repo), hence we must store paths as encrypted values
-// instead of simple signatures/hashes.
-func (db *DB) encryptPath(path []string) (encrypted []byte, err error) {
-	return nil, nil
+// PBKDF2 was chosen as a fast enough and secure enough key derivation function.
+// Run 'go test ./database -bench=KDF' to compare different algorithms,
+// see 'path_algo_test.go' for details.
+func (db *DB) securePath(path []string) (secure []byte, err error) {
+	const (
+		outputSize = sha256.Size
+		iter       = 1024
+		saltSize   = sha256.Size
+	)
+
+	plain, err := pack.Encode(path)
+	if err != nil {
+		return nil, fmt.Errorf("encoding path to binary: %w", err)
+	}
+	signature, err := db.key.Sign(notReader{}, plain)
+	if err != nil {
+		return nil, fmt.Errorf("signature: %w", err)
+	}
+	if len(signature.Blob) < saltSize*2 {
+		return nil, errors.New("signature is too short")
+	}
+	secure = pbkdf2.Key(
+		append(plain, signature.Blob[saltSize:]...),
+		signature.Blob[:saltSize],
+		iter,
+		outputSize,
+		sha256.New,
+	)
+	return secure, nil
 }
 
-func (db *DB) decryptPath(encrypted []byte) (path []string, err error) {
-	return nil, nil
+type notReader struct{}
+
+func (n notReader) Read(p []byte) (int, error) {
+	return 0, errors.New("random numbers make signature non-deterministic")
 }
