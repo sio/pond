@@ -1,3 +1,4 @@
+// A bespoke binary serialization format
 package pack
 
 import (
