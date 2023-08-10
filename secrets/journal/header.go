@@ -165,7 +165,7 @@ func (j *Journal) v1InitializeJournal(h *v1Header) error {
 		return fmt.Errorf("signature is too short: %d bytes instead of at least 64", len(signature.Blob))
 	}
 	var derived, key []byte
-	derived = argon2.IDKey(signature.Blob[:32], signature.Blob[32:], 1, 64*1024, 4, v1KeyBytes+v1SeparatorBytes)
+	derived = argon2.IDKey(signature.Blob[32:], signature.Blob[:32], 1, 64*1024, 4, v1KeyBytes+v1SeparatorBytes)
 	j.separator, key = derived[:v1SeparatorBytes], derived[v1SeparatorBytes:]
 	j.state = append(nonce, key...)
 	return nil
