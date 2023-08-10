@@ -12,8 +12,8 @@ var (
 )
 
 // Encrypt sensitive value
-func Encrypt(signer ssh.Signer, path []string, value []byte, deterministic bool) (cipher []byte, err error) {
-	return v1encrypt(signer, path, value, deterministic)
+func Encrypt(signer ssh.Signer, path []string, value []byte) (cipher []byte, err error) {
+	return v1encrypt(signer, path, value)
 }
 
 // Decrypt sensitive value

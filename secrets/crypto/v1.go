@@ -6,7 +6,6 @@ package crypto
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -15,7 +14,7 @@ import (
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ssh"
 
-	"secrets/pack"
+	"secrets/util"
 )
 
 const (
@@ -27,18 +26,10 @@ const (
 	v1boxKeyBytes     int  = 32
 )
 
-func v1encrypt(signer ssh.Signer, path []string, value []byte, deterministic bool) (cipher []byte, err error) {
+func v1encrypt(signer ssh.Signer, path []string, value []byte) (cipher []byte, err error) {
 	var nonce []byte
 	var nonceBytes = v1sshNonceBytes + v1kdfNonceBytes + v1boxNonceBytes + v1paddingMaxBytes
-	if !deterministic {
-		nonce, err = randomNonce(nonceBytes)
-	} else {
-		pathBytes, err := pack.Encode(path)
-		if err != nil {
-			return nil, err
-		}
-		nonce, err = deterministicNonce(nonceBytes, append(value, pathBytes...))
-	}
+	nonce, err = randomNonce(nonceBytes)
 	if err != nil {
 		return nil, fmt.Errorf("nonce generation: %w", err)
 	}
@@ -136,19 +127,13 @@ func v1decrypt(signer ssh.Signer, path []string, cipher []byte) (value []byte, e
 
 // Produce a deterministic cryptographic signature for non-secret input
 func v1signature(signer ssh.Signer, path []string, nonce []byte) (signature []byte, err error) {
-	switch signer.PublicKey().Type() {
-	case "ssh-ed25519":
-		// Allow proceeding only with keys known to produce deterministic signatures
-	default:
-		return nil, fmt.Errorf("ssh signature not deterministic: %s", signer.PublicKey().Type())
-	}
 	var chunks = make([][]byte, len(path)+2)
 	chunks[0] = magicHeader
 	chunks[1] = nonce
 	for index, element := range path {
 		chunks[index+2] = []byte(element)
 	}
-	sig, err := signer.Sign(rand.Reader, bytes.Join(chunks, magicSeparator))
+	sig, err := signer.Sign(util.FailingReader, bytes.Join(chunks, magicSeparator))
 	if err != nil {
 		return nil, fmt.Errorf("ssh signature failed: %w", err)
 	}

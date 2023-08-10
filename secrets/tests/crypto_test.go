@@ -34,7 +34,7 @@ func FuzzEncrypt(f *testing.F) {
 		for i := 0; i < repeat; i++ {
 			keywords[i] = keyword
 		}
-		cipher, err = crypto.Encrypt(sign, keywords, []byte(value), false)
+		cipher, err = crypto.Encrypt(sign, keywords, []byte(value))
 		if err != nil {
 			t.Fatal(err)
 		}

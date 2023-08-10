@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 
 	"secrets/pack"
+	"secrets/util"
 )
 
 // Path encryption is not reversible.
@@ -29,7 +30,7 @@ func (db *DB) securePath(path []string) (secure []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("encoding path to binary: %w", err)
 	}
-	signature, err := db.key.Sign(notReader{}, plain)
+	signature, err := db.key.Sign(util.FailingReader, plain)
 	if err != nil {
 		return nil, fmt.Errorf("signature: %w", err)
 	}
@@ -44,10 +45,4 @@ func (db *DB) securePath(path []string) (secure []byte, err error) {
 		sha256.New,
 	)
 	return secure, nil
-}
-
-type notReader struct{}
-
-func (n notReader) Read(p []byte) (int, error) {
-	return 0, errors.New("random numbers make signature non-deterministic")
 }
