@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"hash"
@@ -183,6 +184,31 @@ func BenchmarkKDFpbkdf2(b *testing.B) {
 					b.Fatal(err)
 				}
 				_ = pbkdf2.Key(input[saltBytes:], input[:saltBytes], bm.iter, keyBytes, hash[bm.hash])
+			}
+		})
+	}
+}
+
+func BenchmarkKDFhkdf(b *testing.B) {
+	var hash = map[string]func() hash.Hash{
+		"sha256": sha256.New,
+		"sha512": sha512.New,
+	}
+	var info = []byte("HKDF performance benchmark")
+	var err error
+	var input = make([]byte, ikmBytes+saltBytes)
+	for name, hash := range hash {
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				_, err = io.ReadFull(rand.Reader, input)
+				if err != nil {
+					b.Fatal(err)
+				}
+				kdf := hkdf.New(hash, input[saltBytes:], input[:saltBytes], info)
+				_, err = io.CopyN(io.Discard, kdf, int64(keyBytes))
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}
