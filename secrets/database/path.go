@@ -25,7 +25,6 @@ func (db *DB) securePath(path []string) (secure []byte, err error) {
 	const (
 		outputSize = sha256.Size
 		iter       = 1024
-		saltSize   = sha256.Size
 	)
 
 	plain, err := pack.Encode(path)
@@ -36,13 +35,14 @@ func (db *DB) securePath(path []string) (secure []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("signature: %w", err)
 	}
-	if len(signature.Blob) < saltSize*2 {
+	if len(signature.Blob) < outputSize*2 {
 		return nil, errors.New("signature is too short")
 	}
+	salt := sha256.Sum256(signature.Blob)
 	kdf := hkdf.New(
 		sha256.New,
 		append(plain, signature.Blob...),
-		signature.Blob[:saltSize],
+		salt[:],
 		[]byte("pond/secrets: secure path"),
 	)
 	secure = make([]byte, outputSize)
