@@ -9,9 +9,9 @@ import (
 
 const (
 	selectQuery = `
-		SELECT value
+		SELECT value, expires < unixepoch()
 		FROM data
-		WHERE path=? AND expires > unixepoch()
+		WHERE path=?
 	`
 	insertQuery = `
 		INSERT INTO data(path, value, expires)
@@ -41,12 +41,16 @@ func (db *DB) get(ctx context.Context, engine sqli, path []string) (value []byte
 	}
 
 	var cipherValue []byte
-	err = engine.QueryRowContext(ctx, selectQuery, securePath).Scan(&cipherValue)
+	var expired bool
+	err = engine.QueryRowContext(ctx, selectQuery, securePath).Scan(&cipherValue, &expired)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("sql select: %w", err)
+	}
+	if expired {
+		return nil, ErrValueExpired
 	}
 
 	value, err = db.decryptValue(path, cipherValue)

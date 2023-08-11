@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -44,6 +45,12 @@ func TestReadWriteDB(t *testing.T) {
 		}
 	}
 
+	var expired = []string{"this", "value", "will", "expire", "before", "we", "read", "it"}
+	err = db.Set(ctx, expired, []byte(strings.Join(expired, " ")), -time.Second)
+	if err != nil {
+		t.Fatalf("writing expired value: %v", err)
+	}
+
 	err = db.Close()
 	if err != nil {
 		t.Fatalf("closing database: %v", err)
@@ -68,4 +75,16 @@ func TestReadWriteDB(t *testing.T) {
 			t.Fatalf("value has changed:\nwant: %s\n got: %s", tt.value, string(value))
 		}
 	}
+
+	_, err = db.Get(ctx, expired)
+	if err != database.ErrValueExpired {
+		t.Fatalf("expected expired value error, got %v", err)
+	}
+
+	var notfound = []string{"this", "path", "does", "not", "exist"}
+	_, err = db.Get(ctx, notfound)
+	if err != database.ErrNotFound {
+		t.Fatalf("expected value not found error, got %v", err)
+	}
+
 }

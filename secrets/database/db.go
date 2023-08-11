@@ -21,8 +21,9 @@ type DB struct {
 }
 
 var (
-	ErrNotFound   = errors.New("not found")
-	ErrPathExists = errors.New("path already exists")
+	ErrNotFound     = errors.New("not found")
+	ErrPathExists   = errors.New("path already exists")
+	ErrValueExpired = errors.New("value expired")
 )
 
 func (db *DB) Get(ctx context.Context, path []string) (value []byte, err error) {
