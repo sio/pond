@@ -33,6 +33,16 @@
 ## Users and permissions
 
 - Each key may belong to one and only one user
+- User account classes:
+    - Regular users may only read/write secrets according to their assigned
+      roles via SSH API
+    - Administrators may manage access control lists, add new users, assign
+      roles via SSH API
+    - Server administrators who have access to full journal file(s) may get a
+      full overview of existing secrets (without values), user accounts and
+      access control lists. This functionality is not exposed through API.
+      Full journal file is not required for day to day operation and is better
+      not stored on the same server where secretd is running.
 - Administrator accounts may not be used to access (read or write) any secret values.
   This is a convenience and maintenance feature, not a security measure
   because administrators may simply add new user accounts with any privileges.
