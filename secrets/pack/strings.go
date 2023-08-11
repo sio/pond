@@ -52,8 +52,19 @@ func Encode(s []string) ([]byte, error) {
 // Even though serialization format allows for streaming data, we expect to
 // receive the full input at once - for simplicity.
 // Another implementation may be added to consume io.Reader.
-func Decode(b []byte) ([]string, error) {
+func Decode(data []byte) ([]string, error) {
+	value, rest, err := DecodeHead(data)
+	if err != nil {
+		return nil, err
+	}
+	if len(rest) != 0 {
+		return nil, fmt.Errorf("input left over after deserialization: %d bytes, decoded elements %v", len(rest), value)
+	}
+	return value, nil
+}
 
+// Deserialize a slice of strings prepended to other data
+func DecodeHead(b []byte) (value []string, rest []byte, err error) {
 	// Read elements count and lengths
 	header := utf8.UTFMax
 	if header > len(b) {
@@ -62,18 +73,18 @@ func Decode(b []byte) ([]string, error) {
 	var r []rune
 	r = bytes.Runes(b[:header])
 	if len(r) == 0 {
-		return nil, fmt.Errorf("input is too short to deserialize")
+		return nil, nil, fmt.Errorf("input is too short to deserialize")
 	}
 	header = utf8.UTFMax * int(r[0])
 	if header == 0 { // an empty slice was decoded
-		return []string{}, nil
+		return []string{}, b[1:], nil
 	}
 	if header > len(b) {
 		header = len(b)
 	}
 	r = bytes.Runes(b[:header])
 	if len(r)-1 < int(r[0]) {
-		return nil, fmt.Errorf("input is too short: header advertizes %d elements, only %d lengths provided in first %d bytes", int(r[0]), len(r)-1, header)
+		return nil, nil, fmt.Errorf("input is too short: header advertizes %d elements, only %d lengths provided in first %d bytes", int(r[0]), len(r)-1, header)
 	}
 	r = r[:int(r[0])+1]
 
@@ -88,13 +99,10 @@ func Decode(b []byte) ([]string, error) {
 	for i := 0; i < len(s); i++ {
 		size := int(r[i+1])
 		if len(b) < offset+size {
-			return nil, fmt.Errorf("unexpected end of input at element %d: input size %db, element size %db, current offset %db, previous elements %v", i, len(b), size, offset, s[:i])
+			return nil, nil, fmt.Errorf("unexpected end of input at element %d: input size %db, element size %db, current offset %db, previous elements %v", i, len(b), size, offset, s[:i])
 		}
 		s[i] = string(b[offset : offset+size])
 		offset += size
 	}
-	if offset != len(b) {
-		return nil, fmt.Errorf("input left over after deserialization: %d bytes, decoded elements %v", len(b)-offset, s)
-	}
-	return s, nil
+	return s, b[offset:], nil
 }
