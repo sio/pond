@@ -30,4 +30,8 @@ manual-test-client:
 	-echo Exec + no-pty client  | ssh localhost -p $(MANUAL_TEST_PORT) -T command
 
 
+review-crypto-algorithms:
+	@git grep 'golang.org/x/crypto'|grep -v path_algo_test.go|grep -vE '^go\.'|grep -v 'crypto/ssh'|column -t
+
+
 include ../Makefile.golang
