@@ -2,6 +2,7 @@ package journal
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -165,7 +166,8 @@ func (j *Journal) v1InitializeJournal(h *v1Header) error {
 		return fmt.Errorf("signature is too short: %d bytes instead of at least 64", len(signature.Blob))
 	}
 	var derived, key []byte
-	derived = argon2.IDKey(signature.Blob[32:], signature.Blob[:32], 1, 64*1024, 4, v1KeyBytes+v1SeparatorBytes)
+	salt := sha256.Sum256(signature.Blob)
+	derived = argon2.IDKey(signature.Blob, salt[:], 4, 256*1024, 2, v1KeyBytes+v1SeparatorBytes)
 	j.separator, key = derived[:v1SeparatorBytes], derived[v1SeparatorBytes:]
 	j.state = append(nonce, key...)
 	return nil

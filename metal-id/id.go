@@ -70,6 +70,7 @@ func (id *MetalID) Key() (crypto.Signer, error) {
 	//     should have 256MB free early after boot.
 	//   threads=2
 	//     We target cheap old hardware. Extremely multicore CPUs are not guaranteed.
-	seed := argon2.IDKey(fingerprint[16:], fingerprint[:16], 4, 256*1024, 2, ed25519.SeedSize)
+	salt := sha512.Sum512(fingerprint)
+	seed := argon2.IDKey(fingerprint, salt[:], 4, 256*1024, 2, ed25519.SeedSize)
 	return ed25519.NewKeyFromSeed(seed), nil
 }
