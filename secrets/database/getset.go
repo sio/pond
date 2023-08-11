@@ -13,15 +13,13 @@ const (
 		FROM data
 		WHERE path=? AND expires > unixepoch()
 	`
-	upsertQuery = `
-		INSERT INTO data(path, value)
-		VALUES (?, ?)
-		ON CONFLICT (path) DO
-		UPDATE SET value=excluded.value
-	`
 	insertQuery = `
-		INSERT INTO data(path, value)
-		VALUES (?, ?)
+		INSERT INTO data(path, value, expires)
+		VALUES (?, ?, ?)
+	`
+	upsertQuery = insertQuery + `
+		ON CONFLICT (path) DO
+		UPDATE SET value=excluded.value, expires=excluded.expires
 	`
 	metadataQuery = `
 		SELECT ctime, mtime, expires
@@ -58,7 +56,7 @@ func (db *DB) get(ctx context.Context, engine sqli, path []string) (value []byte
 	return value, nil
 }
 
-func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte, overwrite bool) (err error) {
+func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte, lifetime time.Duration, overwrite bool) (err error) {
 	var securePath, cipherValue []byte
 	securePath, err = db.securePath(path)
 	if err != nil {
@@ -68,11 +66,12 @@ func (db *DB) set(ctx context.Context, engine sqli, path []string, value []byte,
 	if err != nil {
 		return fmt.Errorf("failed to encrypt value: %w", err)
 	}
+	var expires int64 = time.Now().Add(lifetime).Unix()
 	var query = upsertQuery
 	if !overwrite {
 		query = insertQuery
 	}
-	_, err = engine.ExecContext(ctx, query, securePath, cipherValue)
+	_, err = engine.ExecContext(ctx, query, securePath, cipherValue, expires)
 	if err != nil {
 		return fmt.Errorf("sql insert: %w", err)
 	}

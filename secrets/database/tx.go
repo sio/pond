@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 type Tx struct {
@@ -37,12 +38,12 @@ func (t *Tx) Get(path []string) (value []byte, err error) {
 	return t.db.get(t.ctx, t.tx, path)
 }
 
-func (t *Tx) Set(path []string, value []byte) (err error) {
-	return t.db.set(t.ctx, t.tx, path, value, true)
+func (t *Tx) Set(path []string, value []byte, lifetime time.Duration) (err error) {
+	return t.db.set(t.ctx, t.tx, path, value, lifetime, true)
 }
 
-func (t *Tx) Create(path []string, value []byte) (err error) {
-	return t.db.set(t.ctx, t.tx, path, value, false)
+func (t *Tx) Create(path []string, value []byte, lifetime time.Duration) (err error) {
+	return t.db.set(t.ctx, t.tx, path, value, lifetime, false)
 }
 
 func (t *Tx) GetMetadata(path []string) (meta *Metadata, err error) {

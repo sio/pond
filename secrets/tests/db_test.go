@@ -38,7 +38,7 @@ func TestReadWriteDB(t *testing.T) {
 	}
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	for idx, tt := range tests {
-		err := db.Set(ctx, tt.path, []byte(tt.value))
+		err := db.Set(ctx, tt.path, []byte(tt.value), time.Second*2)
 		if err != nil {
 			t.Fatalf("writing value #%d: %v", idx, err)
 		}

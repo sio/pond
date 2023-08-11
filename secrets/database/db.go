@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
@@ -28,12 +29,12 @@ func (db *DB) Get(ctx context.Context, path []string) (value []byte, err error) 
 	return db.get(ctx, db.sql, path)
 }
 
-func (db *DB) Set(ctx context.Context, path []string, value []byte) (err error) {
-	return db.set(ctx, db.sql, path, value, true)
+func (db *DB) Set(ctx context.Context, path []string, value []byte, lifetime time.Duration) (err error) {
+	return db.set(ctx, db.sql, path, value, lifetime, true)
 }
 
-func (db *DB) Create(ctx context.Context, path []string, value []byte) (err error) {
-	return db.set(ctx, db.sql, path, value, false)
+func (db *DB) Create(ctx context.Context, path []string, value []byte, lifetime time.Duration) (err error) {
+	return db.set(ctx, db.sql, path, value, lifetime, false)
 }
 
 func (db *DB) GetMetadata(ctx context.Context, path []string) (meta *Metadata, err error) {
