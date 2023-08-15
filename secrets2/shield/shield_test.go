@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"strings"
 	"time"
 )
 
@@ -70,5 +71,37 @@ func TestShield(t *testing.T) {
 	newCipher = fmt.Sprintf("%x", shield.cipher)
 	if newCipher == oldCipher {
 		t.Fatalf("ciphertext did not change after expiration: %s", newCipher)
+	}
+}
+
+func BenchmarkShield(b *testing.B) {
+	const input = "hello world!"
+
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		b.Fatalf("ed25519: %v", err)
+	}
+	signer, err := ssh.NewSignerFromKey(key)
+	if err != nil {
+		b.Fatalf("signer: %v", err)
+	}
+	for count := 1; count <= 30; count += 3 {
+		data := strings.Repeat(input, count)
+		shield, err := New(signer, []byte(data))
+		if err != nil {
+			b.Fatalf("New(): %v", err)
+		}
+		b.Run(fmt.Sprintf("%dbytes", len(data)), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				value, err := shield.Value()
+				if err != nil {
+					b.Fatalf("Value(): %v", err)
+				}
+				got := string(value.Bytes())
+				if got != data {
+					b.Fatalf("data mangled after shielding: got %q, want %q", got, data)
+				}
+			}
+		})
 	}
 }
