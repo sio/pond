@@ -187,6 +187,9 @@ func (s *Shield) unshield() (data []byte, err error) {
 }
 
 // Clear sensitive data from memory even before the garbage collector kicks in
+func Clean(sensitive []byte) {
+	cleanup(sensitive)
+}
 func cleanup(sensitive []byte) {
 	for i := 0; i < len(sensitive); i++ {
 		sensitive[i] = 0
