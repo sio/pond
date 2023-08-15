@@ -33,5 +33,9 @@ manual-test-client:
 review-crypto-algorithms:
 	@git grep 'golang.org/x/crypto'|grep -v path_algo_test.go|grep -vE '^go\.'|grep -v 'crypto/ssh'|column -t
 
+git-config:
+	git config --local diff.ssh-certificate.textconv "ssh-keygen -Lf"
+	git config --local diff.ssh-certificate.cachetextconv true
+
 
 include ../Makefile.golang
