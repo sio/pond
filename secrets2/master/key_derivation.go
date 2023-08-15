@@ -16,7 +16,7 @@ import (
 // Derive NaCl box key pair from a deterministic SSH signer
 // and random non-secret nonce
 func boxKey(signer ssh.Signer, nonce []byte) (public, private *[32]byte, err error) {
-	if len(nonce) < 64 {
+	if len(nonce) < sha512.Size {
 		return nil, nil, errors.New("nonce is too short")
 	}
 	signature, err := signer.Sign(util.AntiReader, nonce)
