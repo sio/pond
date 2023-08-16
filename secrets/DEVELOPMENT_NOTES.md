@@ -38,7 +38,9 @@ $ secretctl admin -n charlie -k /path/to/charlie-key.pub -r /specific/prefix
 ```console
 $ secretctl set /path/to/secret -v "literal-value"
 $ secretctl set /path/to/secret -f /from/file.txt
+$ cat /from/anywhere.txt | secretctl set /path/to/secret
 $ secretctl cp /source/path /destination/path
+$ secretctl mv /source/path /destination/path
 $ secretctl rm /secret/to/remove
 ```
 
@@ -56,7 +58,8 @@ $ secretd -l 127.0.0.1:2202 -C /path/to/secrets/root
 These queries are equivalent:
 
 ```console
-$ secret /absolute/path relative/path
+$ SECRET_SERVER=secretd.example.com SECRET_USER=/path/to/user-key.pub secret /absolute/path relative/path
+$ secret -s secretd.example.com -u /path/to/user-key.pub /absolute/path relative/path
 $ echo '["/absolute/path", "relative/path"]' | ssh secretd.example.com
 $ echo '["/absolute/path", "relative/path"]' > query; secret -f query
 ```
