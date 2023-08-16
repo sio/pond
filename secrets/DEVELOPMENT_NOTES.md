@@ -58,10 +58,10 @@ $ secretd -l 127.0.0.1:2202 -C /path/to/secrets/root
 These queries are equivalent:
 
 ```console
-$ SECRET_SERVER=secretd.example.com SECRET_USER=/path/to/user-key.pub secret /absolute/path relative/path
-$ secret -s secretd.example.com -u /path/to/user-key.pub /absolute/path relative/path
-$ echo '["/absolute/path", "relative/path"]' | ssh secretd.example.com
-$ echo '["/absolute/path", "relative/path"]' > query; secret -f query
+$ SECRETS_HOST=secretd.example.com SECRETS_USER=/path/to/user-key.pub secrets /absolute/path relative/path
+$ secrets -h secretd.example.com -u /path/to/user-key.pub /absolute/path relative/path
+$ echo '["/absolute/path", "relative/path"]' | ssh secretd.example.com -i /path/to/user-key
+$ echo '["/absolute/path", "relative/path"]' > query; secrets -f query
 ```
 
 Successful output:
