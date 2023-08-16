@@ -11,12 +11,11 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"secrets/access"
 	"secrets/shield"
 )
 
 const (
-	masterCertTag      = "pond/secrets: master key"
-	masterPublicBoxTag = "sendto:master@pond/secrets"
 	masterCertLifetime = time.Hour * 24 * 30 * 9
 )
 
@@ -48,16 +47,16 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 	}
 	cert := &ssh.Certificate{
 		Key:             signer.PublicKey(),
-		KeyId:           masterCertTag,
+		KeyId:           access.MasterCertTag,
 		CertType:        ssh.UserCert,
 		Serial:          uint64(now.UnixNano()),
-		ValidPrincipals: []string{masterCertTag},
+		ValidPrincipals: []string{access.MasterCertTag},
 		ValidAfter:      uint64(now.Unix()),
 		ValidBefore:     uint64(now.Add(masterCertLifetime).Unix()),
 		Reserved:        seed,
 		Permissions: ssh.Permissions{
 			CriticalOptions: map[string]string{
-				masterPublicBoxTag: base64.StdEncoding.EncodeToString(pubkey[:]),
+				access.MasterPublicBoxTag: base64.StdEncoding.EncodeToString(pubkey[:]),
 			},
 		},
 	}
@@ -70,11 +69,13 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 
 // Initialize master key from ssh signer and a corresponding certificate
 func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
-	err := checkCert(signer.PublicKey(), cert)
+	err := access.ValidateMasterCert(signer.PublicKey(), cert)
 	if err != nil {
 		return nil, err
 	}
-	certBoxPubKey, err := base64.StdEncoding.DecodeString(cert.Permissions.CriticalOptions[masterPublicBoxTag])
+	certBoxPubKey, err := base64.StdEncoding.DecodeString(
+		cert.Permissions.CriticalOptions[access.MasterPublicBoxTag],
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -94,39 +95,4 @@ func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
 		signer: signer,
 		boxkey: boxkey,
 	}, nil
-}
-
-// Validate master key certificate
-func checkCert(master ssh.PublicKey, cert *ssh.Certificate) (err error) {
-	if !pubEqual(master, cert.Key) {
-		return fmt.Errorf("certificate was not given to this key")
-	}
-	if !pubEqual(master, cert.SignatureKey) {
-		return fmt.Errorf("certificate was not signed by this key")
-	}
-	if len(cert.Reserved) < sha512.Size {
-		return fmt.Errorf("reserved field is too short: %d bytes", len(cert.Reserved))
-	}
-	if cert.KeyId != masterCertTag {
-		return fmt.Errorf("certificate key id is not %q", masterCertTag)
-	}
-	if len(cert.ValidPrincipals) == 0 {
-		return fmt.Errorf("certificate does not contain a list of valid principals")
-	}
-	validator := &ssh.CertChecker{
-		SupportedCriticalOptions: []string{masterPublicBoxTag},
-	}
-	err = validator.CheckCert(masterCertTag, cert)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Check if two public keys are the same
-func pubEqual(a, b ssh.PublicKey) bool {
-	if a.Type() != b.Type() {
-		return false
-	}
-	return bytes.Equal(a.Marshal(), b.Marshal()) // TODO: key comments are not stripped and may result in false negative
 }

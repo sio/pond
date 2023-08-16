@@ -3,9 +3,12 @@ package master
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/crypto/nacl/box"
+	"golang.org/x/crypto/ssh"
 
+	"secrets/access"
 	"secrets/shield"
 )
 
@@ -47,4 +50,15 @@ func (k *Key) Decrypt(message []byte) (content []byte, err error) {
 		return nil, errors.New("message decryption failed")
 	}
 	return content, nil
+}
+
+// Delegate administrative capabilities
+func (k *Key) Delegate(
+	to ssh.PublicKey,
+	caps []access.Capability,
+	paths []string,
+	name string,
+	lifetime time.Duration,
+) (*ssh.Certificate, error) {
+	return access.DelegateAdmin(k.signer, to, caps, paths, name, lifetime)
 }
