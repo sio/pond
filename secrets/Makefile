@@ -3,7 +3,7 @@
 
 # https://www.arp242.net/static-go.html
 GOBUILD_ARGS=-tags netgo,osusergo,sqlite_omit_load_extension -ldflags="-extldflags=-static"
-GOBUILD_MUST_STATIC=yes
+GOBUILD_MUST_STATIC?=yes
 
 
 # Fail if C compiler is not available (required for sqlite)
