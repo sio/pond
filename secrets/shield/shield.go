@@ -45,6 +45,7 @@ type Shield struct {
 	reshieldError error
 }
 
+// Initialize new protected container for provided data
 func New(signer ssh.Signer, data []byte) (*Shield, error) {
 	s := &Shield{
 		signer: signer,
@@ -62,9 +63,9 @@ func New(signer ssh.Signer, data []byte) (*Shield, error) {
 
 // Read sensitive value protected by shield.
 //
-// Do not copy this data and don't forget to call ShieldedValue.Close()
+// Do not copy this data and don't forget to call UnshieldedValue.Close()
 // when you're done.
-func (s *Shield) Value() (*ShieldedValue, error) {
+func (s *Shield) Value() (*UnshieldedValue, error) {
 	if s.reshieldError != nil {
 		s.reshieldError = s.reshield() // retry reshielding before surfacing the error
 		if s.reshieldError != nil {
@@ -83,7 +84,7 @@ func (s *Shield) Value() (*ShieldedValue, error) {
 		go func() { s.reshieldError = s.reshield() }()
 	}
 
-	sv := ShieldedValue(value)
+	sv := UnshieldedValue(value)
 	return &sv, nil
 }
 

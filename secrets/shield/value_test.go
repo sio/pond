@@ -4,9 +4,9 @@ import (
 	"testing"
 )
 
-func TestShieldedValue(t *testing.T) {
+func TestUnshieldedValue(t *testing.T) {
 	const input = "hello world"
-	v := ShieldedValue([]byte(input))
+	v := UnshieldedValue([]byte(input))
 	b := v.Bytes()
 	if string(b) != input {
 		t.Fatalf("unexpected value: got %q, want %q", string(b), input)

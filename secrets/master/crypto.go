@@ -14,6 +14,7 @@ const (
 	boxNonceSize = 24
 )
 
+// Decrypt short messages addressed to master key
 func (k *Key) Decrypt(message []byte) (content []byte, err error) {
 	const minSize = boxKeySize + boxNonceSize + box.Overhead
 	if len(message) <= minSize {
