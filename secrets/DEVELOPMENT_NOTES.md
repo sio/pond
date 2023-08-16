@@ -86,3 +86,15 @@ Error output:
   ]
 }
 ```
+
+
+### Repo maintenance
+
+```console
+$ secretctl check
+```
+
+- Must not require any keys to execute
+- Validate certificate chains for all users
+- Validate all stored secrets
+- Warnings for expired entries, errors for invalid ones
