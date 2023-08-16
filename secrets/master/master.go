@@ -56,7 +56,7 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 		ValidBefore:     uint64(now.Add(masterCertLifetime).Unix()),
 		Reserved:        seed,
 		Permissions: ssh.Permissions{
-			Extensions: map[string]string{
+			CriticalOptions: map[string]string{
 				masterPublicBoxTag: base64.StdEncoding.EncodeToString(pubkey[:]),
 			},
 		},
@@ -74,7 +74,7 @@ func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	certBoxPubKey, err := base64.StdEncoding.DecodeString(cert.Permissions.Extensions[masterPublicBoxTag])
+	certBoxPubKey, err := base64.StdEncoding.DecodeString(cert.Permissions.CriticalOptions[masterPublicBoxTag])
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,9 @@ func checkCert(signer ssh.Signer, cert *ssh.Certificate) (err error) {
 	if cert.KeyId != masterCertTag {
 		return fmt.Errorf("certificate key id is not %q", masterCertTag)
 	}
-	validator := &ssh.CertChecker{}
+	validator := &ssh.CertChecker{
+		SupportedCriticalOptions: []string{masterPublicBoxTag},
+	}
 	err = validator.CheckCert(masterCertTag, cert)
 	if err != nil {
 		return err
