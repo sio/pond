@@ -112,6 +112,9 @@ func checkCert(signer ssh.Signer, cert *ssh.Certificate) (err error) {
 	if cert.KeyId != masterCertTag {
 		return fmt.Errorf("certificate key id is not %q", masterCertTag)
 	}
+	if len(cert.ValidPrincipals) == 0 {
+		return fmt.Errorf("certificate does not contain a list of valid principals")
+	}
 	validator := &ssh.CertChecker{
 		SupportedCriticalOptions: []string{masterPublicBoxTag},
 	}
