@@ -19,7 +19,7 @@ func boxKey(signer ssh.Signer, nonce []byte) (public, private *[32]byte, err err
 	if len(nonce) < sha512.Size {
 		return nil, nil, errors.New("nonce is too short")
 	}
-	signature, err := signer.Sign(util.AntiReader, nonce)
+	signature, err := signer.Sign(util.AntiReader, append([]byte(masterCertTag), nonce...))
 	if err == util.ErrAntiReader {
 		return nil, nil, fmt.Errorf("signature not deterministic: %s", signer.PublicKey().Type())
 	}

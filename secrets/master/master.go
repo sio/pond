@@ -3,6 +3,7 @@ package master
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -27,7 +28,15 @@ type Key struct {
 
 // Generate new master key certificate
 func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
-	seed := make([]byte, 16*1024)
+	// We use random seed larger than any hash used by ssh signatures,
+	// prefixed by a constant string to avoid collisions with other uses of ssh
+	// signature.
+	//
+	// Nevertheless, one should not use master key for unrelated signing
+	// operations to avoid leaking the signature from which box keys are derived.
+	const seedSize = sha512.Size * 4
+
+	seed := make([]byte, seedSize)
 	_, err := io.ReadFull(rand.Reader, seed)
 	if err != nil {
 		return nil, err
@@ -97,7 +106,7 @@ func checkCert(signer ssh.Signer, cert *ssh.Certificate) (err error) {
 	if err != nil {
 		return fmt.Errorf("certificate was not signed by this key: %w", err)
 	}
-	if len(cert.Reserved) < 1024 {
+	if len(cert.Reserved) < sha512.Size {
 		return fmt.Errorf("reserved field is too short: %d bytes", len(cert.Reserved))
 	}
 	if cert.KeyId != masterCertTag {
