@@ -70,7 +70,7 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 
 // Initialize master key from ssh signer and a corresponding certificate
 func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
-	err := checkCert(signer, cert)
+	err := checkCert(signer.PublicKey(), cert)
 	if err != nil {
 		return nil, err
 	}
@@ -97,14 +97,12 @@ func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
 }
 
 // Validate master key certificate
-func checkCert(signer ssh.Signer, cert *ssh.Certificate) (err error) {
-	err = checkKeyMatch(signer, cert.Key)
-	if err != nil {
-		return fmt.Errorf("certificate was not given to this key: %w", err)
+func checkCert(master ssh.PublicKey, cert *ssh.Certificate) (err error) {
+	if !pubEqual(master, cert.Key) {
+		return fmt.Errorf("certificate was not given to this key")
 	}
-	err = checkKeyMatch(signer, cert.SignatureKey)
-	if err != nil {
-		return fmt.Errorf("certificate was not signed by this key: %w", err)
+	if !pubEqual(master, cert.SignatureKey) {
+		return fmt.Errorf("certificate was not signed by this key")
 	}
 	if len(cert.Reserved) < sha512.Size {
 		return fmt.Errorf("reserved field is too short: %d bytes", len(cert.Reserved))
@@ -125,20 +123,10 @@ func checkCert(signer ssh.Signer, cert *ssh.Certificate) (err error) {
 	return nil
 }
 
-// Check if given public and private keys are from the same pair
-func checkKeyMatch(private ssh.Signer, public ssh.PublicKey) error {
-	var junk [64]byte
-	_, err := io.ReadFull(rand.Reader, junk[:])
-	if err != nil {
-		return err
+// Check if two public keys are the same
+func pubEqual(a, b ssh.PublicKey) bool {
+	if a.Type() != b.Type() {
+		return false
 	}
-	sig, err := private.Sign(rand.Reader, junk[:])
-	if err != nil {
-		return err
-	}
-	err = public.Verify(junk[:], sig)
-	if err != nil {
-		return err
-	}
-	return nil
+	return bytes.Equal(a.Marshal(), b.Marshal()) // TODO: key comments are not stripped and may result in false negative
 }
