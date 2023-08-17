@@ -1,11 +1,11 @@
 # Assorted development notes
 
-## CLI UX
+## CLI UX mockup
 
 ### Initializing secrets repository
 
 ```console
-$ secretctl init -key=/path/to/master-key.pub
+$ secretctl init /path/to/master-key.pub
 ```
 
 - Check if current directory is empty
@@ -98,3 +98,16 @@ $ secretctl check
 - Validate certificate chains for all users
 - Validate all stored secrets
 - Warnings for expired entries, errors for invalid ones
+
+
+### Extend certificate lifetime
+
+```
+$ secretctl extend path/to/cert [90d]
+```
+
+- Check if original signer of the cert is available in ssh-agent
+- Reissue the same cert with new "ValidBefore"
+- Save to a new temporary file in the same directory
+- Atomically replace original file with the new one while keeping a backup
+  under incremented index
