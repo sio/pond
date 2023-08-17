@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -40,7 +41,13 @@ func ok(message any, args ...any) {
 }
 
 func fail(message any, args ...any) {
-	out(os.Stderr, message, args...)
+	var buf = new(bytes.Buffer)
+	out(buf, message, args...)
+	errmsg := buf.String()
+	if !strings.HasPrefix(strings.ToLower(errmsg), "error") {
+		errmsg = "Error: " + errmsg
+	}
+	out(os.Stderr, errmsg)
 	os.Exit(1)
 }
 
