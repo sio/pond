@@ -2,6 +2,7 @@
 package agent
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -101,8 +102,20 @@ func (c *Conn) connect() error {
 		return err
 	}
 	_, err = c.sign(rand.Reader, msg)
-	if err != nil {
-		return fmt.Errorf("ssh-agent initialization failed: %w", err)
+	if err == nil {
+		return nil
 	}
-	return nil
+
+	// Debug why signature failed to provide a better error message
+	signers, dbgErr := c.agent.Signers()
+	if dbgErr != nil {
+		return err
+	}
+	for _, s := range signers {
+		if bytes.Equal(s.PublicKey().Marshal(), c.key.Marshal()) {
+			// ssh-agent contains required identity, error was about something else
+			return err
+		}
+	}
+	return fmt.Errorf("ssh-agent: identity not available: %s", ssh.FingerprintSHA256(c.key))
 }
