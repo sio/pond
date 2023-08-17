@@ -13,7 +13,7 @@ import (
 )
 
 type InitCmd struct {
-	PublicKey string `arg:"" name:"pubkey" type:"path" help:"Path to SSH public key to be used as repository master key"`
+	PublicKey string `arg:"" name:"pubkey" type:"path" help:"Path to public part of ssh keypair to be used as repository master key"`
 }
 
 func (c *InitCmd) Run() error {
