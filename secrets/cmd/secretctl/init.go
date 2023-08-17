@@ -40,7 +40,7 @@ func (c *InitCmd) Run() error {
 		}
 	}
 	ok("Created directories for secrets repository")
-	file, err := os.OpenFile(certPath, os.O_CREATE, 0600)
+	file, err := os.OpenFile(certPath, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return err
 	}
