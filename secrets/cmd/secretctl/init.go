@@ -1,15 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"golang.org/x/crypto/ssh"
-
 	"secrets/agent"
 	"secrets/master"
+	"secrets/repo"
 )
 
 type InitCmd struct {
@@ -17,10 +11,6 @@ type InitCmd struct {
 }
 
 func (c *InitCmd) Run() error {
-	err := checkRepoEmpty()
-	if err != nil {
-		return err
-	}
 	signer, err := agent.Open(c.PublicKey)
 	if err != nil {
 		return err
@@ -29,47 +19,10 @@ func (c *InitCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	certPath, err := filepath.Abs(filepath.Join("access", "master.cert"))
+	repo, err := repo.Create(".", cert)
 	if err != nil {
 		return err
 	}
-	for _, subdir := range []string{"access", "secrets"} {
-		err = os.Mkdir(subdir, 0700)
-		if err != nil {
-			return err
-		}
-	}
-	ok("Created directories for secrets repository")
-	file, err := os.OpenFile(certPath, os.O_RDWR|os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-	_, err = file.Write(ssh.MarshalAuthorizedKey(cert))
-	if err != nil {
-		return err
-	}
-	ok("Saved master certificate: %s", certPath)
-	ok("Secrets repository initialized successfully")
-	return nil
-}
-
-func checkRepoEmpty() error {
-	items, err := os.ReadDir(".")
-	if err != nil {
-		return err
-	}
-	for _, item := range items {
-		if item.Name() == ".git" {
-			continue
-		}
-		if strings.HasSuffix(item.Name(), ".md") {
-			continue
-		}
-		dir, err := filepath.Abs(".")
-		if err != nil {
-			dir = "."
-		}
-		return fmt.Errorf("directory not empty: %s", dir)
-	}
+	ok("Initialized new secrets repository: %s", repo.Path())
 	return nil
 }
