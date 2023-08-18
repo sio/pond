@@ -54,8 +54,8 @@ func (c *Conn) PublicKey() ssh.PublicKey {
 	return c.key
 }
 
-func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
-	sig, err := c.sign(rand, data)
+func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) { // TODO: rand not used, non-deterministic signature will not be detected
+	sig, err := c.sign(data)
 	if err == nil {
 		return sig, nil
 	}
@@ -63,10 +63,10 @@ func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.sign(rand, data)
+	return c.sign(data)
 }
 
-func (c *Conn) sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
+func (c *Conn) sign(data []byte) (*ssh.Signature, error) {
 	if c.agent == nil || c.key == nil {
 		return nil, fmt.Errorf("ssh-agent connection not initialized")
 	}
@@ -101,7 +101,7 @@ func (c *Conn) connect() error {
 	if err != nil {
 		return err
 	}
-	_, err = c.sign(rand.Reader, msg)
+	_, err = c.sign(msg)
 	if err == nil {
 		return nil
 	}
