@@ -46,17 +46,16 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 		return nil, err
 	}
 	cert := &ssh.Certificate{
-		Key:             signer.PublicKey(),
-		KeyId:           access.MasterCertTag,
-		CertType:        ssh.UserCert,
-		Serial:          uint64(now.UnixNano()),
-		ValidPrincipals: []string{access.MasterCertTag},
-		ValidAfter:      uint64(now.Unix()),
-		ValidBefore:     uint64(now.Add(masterCertLifetime).Unix()),
-		Reserved:        seed,
+		Key:         signer.PublicKey(),
+		KeyId:       base64.StdEncoding.EncodeToString(pubkey[:]),
+		CertType:    ssh.UserCert,
+		Serial:      uint64(now.UnixNano()),
+		ValidAfter:  uint64(now.Unix()),
+		ValidBefore: uint64(now.Add(masterCertLifetime).Unix()),
+		Reserved:    seed,
 		Permissions: ssh.Permissions{
 			CriticalOptions: map[string]string{
-				access.MasterPublicBoxTag: base64.StdEncoding.EncodeToString(pubkey[:]),
+				string(access.Master): "",
 			},
 		},
 	}
@@ -73,9 +72,7 @@ func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	certBoxPubKey, err := base64.StdEncoding.DecodeString(
-		cert.Permissions.CriticalOptions[access.MasterPublicBoxTag],
-	)
+	certBoxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
 	if err != nil {
 		return nil, err
 	}

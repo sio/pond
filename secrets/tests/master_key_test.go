@@ -6,7 +6,6 @@ import (
 
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/nacl/box"
@@ -50,22 +49,18 @@ func TestMasterKey(t *testing.T) {
 		keyPath  = "keys/master"
 		certPath = keyPath + ".cert"
 
-		// ssh-keygen -Lf certPath | grep sendto
-		expectedBoxKey = "0000002c612f556357784a697063614169786e34515a694d7a4a304d4546756b614151524d33562b562b43566a48773d"
+		// ssh-keygen -Lf certPath | grep ID
+		expectedBoxKey = "VW9zVIvxFXj8VhdjeQmDOHwc/WskrO7yMD/5dlLjj1o="
 	)
-	b64PubKey, err := hex.DecodeString(expectedBoxKey)
-	if err != nil {
-		t.Fatalf("hex decode: %v", err)
-	}
 	cert, err := LocalCert(certPath)
 	if err != nil {
 		t.Fatalf("LocalCert: %v", err)
 	}
-	if string(b64PubKey[4:]) != cert.Permissions.CriticalOptions["sendto:master@pond/secrets"] {
+	if expectedBoxKey != cert.KeyId {
 		t.Fatalf(
 			"unexpected box public key:\nwant: %s\n got: %s",
-			string(b64PubKey[4:]),
-			cert.Permissions.CriticalOptions["sendto:master@pond/secrets"],
+			expectedBoxKey,
+			cert.KeyId,
 		)
 	}
 	signer, err := LocalKey(keyPath)
@@ -76,9 +71,7 @@ func TestMasterKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewKey: %v", err)
 	}
-	boxPubKey, err := base64.StdEncoding.DecodeString(
-		cert.Permissions.CriticalOptions["sendto:master@pond/secrets"],
-	)
+	boxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
 	if err != nil {
 		t.Fatalf("base64 decode: %v", err)
 	}

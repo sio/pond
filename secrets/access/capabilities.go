@@ -7,6 +7,7 @@ const (
 	ManageReaders            = "pond/secrets: manage read access"
 	Read                     = "pond/secrets: read secrets"
 	Write                    = "pond/secrets: write secrets"
+	Master                   = "pond/secrets: master key"
 )
 
 func (c Capability) Admin() bool {
