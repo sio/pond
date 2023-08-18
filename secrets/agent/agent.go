@@ -32,6 +32,10 @@ func Open(path string) (*Conn, error) {
 // Return ssh-agent connection that corresponds to a given public key
 func New(public ssh.PublicKey) (*Conn, error) {
 	conn := &Conn{key: public}
+	switch conn.key.Type() {
+	case ssh.KeyAlgoRSA, ssh.CertAlgoRSAv01: // do not use old SHA-1 signatures
+		conn.flags = agent.SignatureFlagRsaSha512
+	}
 	if err := conn.connect(); err != nil {
 		return nil, err
 	}
@@ -45,7 +49,8 @@ func New(public ssh.PublicKey) (*Conn, error) {
 type Conn struct {
 	key    ssh.PublicKey
 	socket net.Conn
-	agent  agent.Agent
+	agent  agent.ExtendedAgent
+	flags  agent.SignatureFlags
 	count  uint32 // TODO: expose as metrics
 	mu     sync.Mutex
 }
@@ -71,7 +76,7 @@ func (c *Conn) sign(data []byte) (*ssh.Signature, error) {
 		return nil, fmt.Errorf("ssh-agent connection not initialized")
 	}
 	atomic.AddUint32(&c.count, 1)
-	return c.agent.Sign(c.key, data)
+	return c.agent.SignWithFlags(c.key, data, c.flags)
 }
 
 func (c *Conn) Close() error {
