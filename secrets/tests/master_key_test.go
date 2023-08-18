@@ -4,6 +4,7 @@ import (
 	"secrets/master"
 	"testing"
 
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -99,6 +100,64 @@ func TestMasterKey(t *testing.T) {
 	}
 	if string(received) != content {
 		t.Fatalf("received mangled message: %q", string(received))
+	}
+}
+
+func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
+	const (
+		keyPath  = "keys/master"
+		certPath = keyPath + ".cert"
+	)
+	cert, err := LocalCert(certPath)
+	if err != nil {
+		b.Fatalf("LocalCert: %v", err)
+	}
+	signer, err := LocalKey(keyPath)
+	if err != nil {
+		b.Fatalf("LocalKey: %v", err)
+	}
+	key, err := master.NewKey(signer, cert)
+	if err != nil {
+		b.Fatalf("NewKey: %v", err)
+	}
+	boxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
+	if err != nil {
+		b.Fatalf("base64 decode: %v", err)
+	}
+	var receiverPubKey = new([32]byte)
+	copy(receiverPubKey[:], boxPubKey)
+	senderPubKey, senderPrivKey, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		b.Fatalf("GenerateKey: %v", err)
+	}
+	var nonce = new([24]byte)
+	_, err = io.ReadFull(rand.Reader, nonce[:])
+	if err != nil {
+		b.Fatalf("rand: %v", err)
+	}
+
+	var (
+		msgSize = 30
+		buf     = make([]byte, 4096)
+		pkg     = make([]byte, msgSize+box.Overhead+len(senderPubKey)+len(nonce))
+	)
+	copy(pkg, senderPubKey[:])
+	copy(pkg[len(senderPubKey):], nonce[:])
+	_, err = io.ReadFull(rand.Reader, buf)
+	if err != nil {
+		b.Fatalf("rand: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		start := i % (len(buf) - msgSize)
+		send := buf[start : start+msgSize]
+		pkg = box.Seal(pkg[:len(senderPubKey)+len(nonce)], send, nonce, receiverPubKey, senderPrivKey)
+		msg, err := key.Decrypt(pkg)
+		if err != nil {
+			b.Fatalf("decrypt: %v", err)
+		}
+		if !bytes.Equal(msg, send) {
+			b.Fatalf("mangled message:\nwant %x\n got: %x", send, msg)
+		}
 	}
 }
 
