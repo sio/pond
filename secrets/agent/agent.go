@@ -47,19 +47,28 @@ func New(public ssh.PublicKey) (*Conn, error) {
 // Conn implements ssh.Signer interface and may be used everywhere
 // ssh private key is expected
 type Conn struct {
-	key    ssh.PublicKey
-	socket net.Conn
-	agent  agent.ExtendedAgent
-	flags  agent.SignatureFlags
-	count  uint32 // TODO: expose as metrics
-	mu     sync.Mutex
+	key        ssh.PublicKey
+	socket     net.Conn
+	agent      agent.ExtendedAgent
+	flags      agent.SignatureFlags
+	count      uint32 // TODO: expose as metrics
+	mu         sync.Mutex
+	randomized bool
 }
 
 func (c *Conn) PublicKey() ssh.PublicKey {
 	return c.key
 }
 
-func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) { // TODO: rand not used, non-deterministic signature will not be detected
+func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
+	if c.randomized {
+		// Let caller know that signature is not deterministic by consuming
+		// a single byte from rand
+		_, err := io.CopyN(io.Discard, rand, 1)
+		if err != nil {
+			return nil, err
+		}
+	}
 	sig, err := c.sign(data)
 	if err == nil {
 		return sig, nil
@@ -106,21 +115,29 @@ func (c *Conn) connect() error {
 	if err != nil {
 		return err
 	}
-	_, err = c.sign(msg)
-	if err == nil {
-		return nil
-	}
-
-	// Debug why signature failed to provide a better error message
-	signers, dbgErr := c.agent.Signers()
-	if dbgErr != nil {
-		return err
-	}
-	for _, s := range signers {
-		if bytes.Equal(s.PublicKey().Marshal(), c.key.Marshal()) {
-			// ssh-agent contains required identity, error was about something else
+	sig1, err := c.sign(msg)
+	if err != nil {
+		// Debug why signature failed to provide a better error message
+		signers, dbgErr := c.agent.Signers()
+		if dbgErr != nil {
 			return err
 		}
+		for _, s := range signers {
+			if bytes.Equal(s.PublicKey().Marshal(), c.key.Marshal()) {
+				// ssh-agent contains required identity, error was about something else
+				return err
+			}
+		}
+		return fmt.Errorf("ssh-agent: identity not available: %s", ssh.FingerprintSHA256(c.key))
 	}
-	return fmt.Errorf("ssh-agent: identity not available: %s", ssh.FingerprintSHA256(c.key))
+
+	// Detect non-deterministic signatures
+	sig2, err := c.sign(msg)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(sig1.Blob, sig2.Blob) {
+		c.randomized = true
+	}
+	return nil
 }
