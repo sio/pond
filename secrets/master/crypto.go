@@ -2,14 +2,12 @@ package master
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/ssh"
 
 	"secrets/access"
-	"secrets/shield"
 )
 
 const (
@@ -24,28 +22,16 @@ func (k *Key) Decrypt(message []byte) (content []byte, err error) {
 		return nil, errors.New("message is too short to decrypt")
 	}
 
-	var senderKey [boxKeySize]byte
-	n := copy(senderKey[:], message[:boxKeySize])
-	if n != boxKeySize {
-		return nil, errors.New("failed to read sender's public key")
-	}
+	var senderKey = new([boxKeySize]byte)
+	copy(senderKey[:], message[:boxKeySize])
 
-	var boxNonce [boxNonceSize]byte
-	n = copy(boxNonce[:], message[boxKeySize:boxKeySize+boxNonceSize])
-	if n != boxNonceSize {
-		return nil, errors.New("failed to read message nonce")
-	}
+	var boxNonce = new([boxNonceSize]byte)
+	copy(boxNonce[:], message[boxKeySize:boxKeySize+boxNonceSize])
 
-	boxkey, err := k.boxkey.Value()
-	if err != nil {
-		return nil, fmt.Errorf("unshield: %w", err)
-	}
-	var receiverKey [boxKeySize]byte
-	copy(receiverKey[:], boxkey.Bytes())
-	boxkey.Close()
-	defer shield.Clean(receiverKey[:])
+	_, receiverKey, err := boxKey(k.signer, k.seed)
+	defer clean(receiverKey[:])
 
-	content, ok := box.Open(nil, message[boxKeySize+boxNonceSize:], &boxNonce, &senderKey, &receiverKey)
+	content, ok := box.Open(nil, message[boxKeySize+boxNonceSize:], boxNonce, senderKey, receiverKey)
 	if !ok {
 		return nil, errors.New("message decryption failed")
 	}

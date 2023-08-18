@@ -50,7 +50,7 @@ func TestMasterKey(t *testing.T) {
 		certPath = keyPath + ".cert"
 
 		// ssh-keygen -Lf certPath | grep ID
-		expectedBoxKey = "VW9zVIvxFXj8VhdjeQmDOHwc/WskrO7yMD/5dlLjj1o="
+		expectedBoxKey = "JgyCPNQAml3Lcm21zXfZPYIHiFw4I/1bjhxfbX5CyV0="
 	)
 	cert, err := LocalCert(certPath)
 	if err != nil {

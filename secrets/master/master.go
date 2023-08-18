@@ -12,7 +12,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"secrets/access"
-	"secrets/shield"
 )
 
 const (
@@ -22,7 +21,7 @@ const (
 // Master key for pond/secrets
 type Key struct {
 	signer ssh.Signer
-	boxkey *shield.Shield
+	seed   []byte
 }
 
 // Generate new master key certificate
@@ -76,20 +75,17 @@ func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	pubKey, privKey, err := boxKey(signer, cert.Reserved)
+	pubkey, _, err := boxKey(signer, cert.Reserved)
 	if err != nil {
 		return nil, err
 	}
-	defer shield.Clean(privKey[:])
-	if !bytes.Equal(certBoxPubKey, pubKey[:]) {
+	if !bytes.Equal(certBoxPubKey, pubkey[:]) {
 		return nil, fmt.Errorf("derived box key does not match the one in certificate")
 	}
-	boxkey, err := shield.New(signer, privKey[:])
-	if err != nil {
-		return nil, err
-	}
+	seed := make([]byte, len(cert.Reserved))
+	copy(seed, cert.Reserved)
 	return &Key{
 		signer: signer,
-		boxkey: boxkey,
+		seed:   seed,
 	}, nil
 }

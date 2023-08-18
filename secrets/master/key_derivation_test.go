@@ -14,7 +14,7 @@ func TestBoxKeyDerivation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("generate key: %v", err)
 		}
-		derivedKey := deriveBoxKey(privKey)
+		derivedKey := derivePublicKey(privKey)
 		if !bytes.Equal(pubKey[:], derivedKey[:]) {
 			t.Fatalf("derived public key mismatch:\n got: %x\nwant: %x", derivedKey, pubKey)
 		}
