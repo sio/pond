@@ -30,6 +30,9 @@ func ValidateMasterCert(master ssh.PublicKey, cert *ssh.Certificate) (err error)
 	if len(cert.ValidPrincipals) != 0 {
 		return fmt.Errorf("master key certificate must not list any principals")
 	}
+	if len(cert.Permissions.CriticalOptions) == 0 {
+		return fmt.Errorf("critical options field is empty")
+	}
 	validator := &ssh.CertChecker{
 		SupportedCriticalOptions: []string{string(Master)},
 	}
