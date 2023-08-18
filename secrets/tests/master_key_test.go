@@ -103,6 +103,8 @@ func TestMasterKey(t *testing.T) {
 	}
 }
 
+// Measure encryption+decryption cycle.
+// See BenchmarkMasterKeyEncrypt for a baseline.
 func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 	const (
 		keyPath  = "keys/master"
@@ -158,6 +160,41 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 		if !bytes.Equal(msg, send) {
 			b.Fatalf("mangled message:\nwant %x\n got: %x", send, msg)
 		}
+	}
+}
+
+// Measure encryption speed to provide baseline
+// for BenchmarkMasterKeyEncryptDecrypt
+func BenchmarkMasterKeyEncrypt(b *testing.B) {
+	receiverPubKey, _, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		b.Fatalf("GenerateKey: %v", err)
+	}
+	senderPubKey, senderPrivKey, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		b.Fatalf("GenerateKey: %v", err)
+	}
+	var nonce = new([24]byte)
+	_, err = io.ReadFull(rand.Reader, nonce[:])
+	if err != nil {
+		b.Fatalf("rand: %v", err)
+	}
+
+	var (
+		msgSize = 30
+		buf     = make([]byte, 4096)
+		pkg     = make([]byte, msgSize+box.Overhead+len(senderPubKey)+len(nonce))
+	)
+	copy(pkg, senderPubKey[:])
+	copy(pkg[len(senderPubKey):], nonce[:])
+	_, err = io.ReadFull(rand.Reader, buf)
+	if err != nil {
+		b.Fatalf("rand: %v", err)
+	}
+	for i := 0; i < b.N; i++ {
+		start := i % (len(buf) - msgSize)
+		send := buf[start : start+msgSize]
+		pkg = box.Seal(pkg[:len(senderPubKey)+len(nonce)], send, nonce, receiverPubKey, senderPrivKey)
 	}
 }
 
