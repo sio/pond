@@ -15,7 +15,12 @@ func Create(path string, master *ssh.Certificate) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, subdir := range []string{accessDir, secretsDir} {
+	for _, subdir := range []string{
+		accessDir,
+		secretsDir,
+		filepath.Join(accessDir, usersDir),
+		filepath.Join(accessDir, adminDir),
+	} {
 		err = os.Mkdir(filepath.Join(path, subdir), 0700)
 		if err != nil {
 			return nil, err
