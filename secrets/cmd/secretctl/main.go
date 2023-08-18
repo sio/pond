@@ -11,7 +11,7 @@ import (
 )
 
 var cli struct {
-	Chdir string  `short:"C" env:"SECRETS_DIR" placeholder:"path" type:"path" help:"Path to secrets repository root"`
+	Chdir string  `short:"C" env:"SECRETS_DIR" placeholder:"path" type:"path" help:"Change working directory prior to executing"`
 	Init  InitCmd `cmd:"init" help:"Initialize secrets repository in an empty directory"`
 }
 
