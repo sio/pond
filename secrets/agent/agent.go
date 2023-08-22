@@ -26,6 +26,9 @@ func Open(path string) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cert, ok := key.(*ssh.Certificate); ok {
+		return New(cert.Key)
+	}
 	return New(key)
 }
 
