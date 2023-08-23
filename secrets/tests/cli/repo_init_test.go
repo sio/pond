@@ -18,9 +18,7 @@ func TestRepoInitialization(t *testing.T) {
 		[][]string{
 			{secretctl, "init", "tests/keys/master.pub"},
 		},
-		[]string{
-			"tests/keys/master.pub",
-		},
+		nil,
 	)
 	t.Cleanup(cli.Cleanup)
 	if err != nil {
