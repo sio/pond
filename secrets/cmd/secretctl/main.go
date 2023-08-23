@@ -13,6 +13,7 @@ import (
 var cli struct {
 	Chdir string  `short:"C" env:"SECRETS_DIR" placeholder:"path" type:"path" help:"Change working directory prior to executing"`
 	Init  InitCmd `cmd:"init" help:"Initialize secrets repository in an empty directory"`
+	Cert  CertCmd `cmd:"cert" help:"Issue certificate to delegate user/administrator privileges"`
 }
 
 func main() {
