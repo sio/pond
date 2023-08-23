@@ -20,10 +20,10 @@ func TestRepoInitialization(t *testing.T) {
 		},
 		nil,
 	)
-	t.Cleanup(cli.Cleanup)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(cli.Cleanup)
 	err = cli.Execute()
 	if err != nil {
 		t.Fatal(err)
