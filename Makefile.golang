@@ -108,6 +108,25 @@ $(CLOC):
 loc: $(CLOC)  ## count lines of code
 	$(CLOC) .
 
+GOMODULE=$(shell grep -oP "(?<=module ).*" go.mod)
+define import_tree_awk
+BEGIN {
+	print "strict digraph import_tree {";
+}
+END {
+	print "}";
+}
+/\.go:/ {
+	match($$1,/(.*)\//,parent);
+	match($$2,/$(GOMODULE)\/(.*)"/,child);
+	print "\t\"" parent[1] "\" -> \"" child[1] "\"";
+}
+endef
+export import_tree_awk
+.PHONY: import-tree
+import-tree:  ## print import tree in Graphviz dot format
+	@git grep '"$(GOMODULE)/' | sort -u | awk "$$import_tree_awk"
+
 .PHONY: help
 help:  ## show help message
 	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST)) | column -t -s '	'
