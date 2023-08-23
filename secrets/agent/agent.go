@@ -14,13 +14,13 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"secrets/repo"
+	"secrets/util"
 )
 
 // Load public key from file system and return ssh-agent connection
 // for the corresponding private key
 func Open(path string) (*Conn, error) {
-	key, err := repo.LoadPublicKey(path)
+	key, err := util.LoadPublicKey(path)
 	if err != nil {
 		return nil, err
 	}
