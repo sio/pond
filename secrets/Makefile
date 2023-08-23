@@ -13,6 +13,12 @@ export CGO_ENABLED=1
 $(EXE): $(shell find . -type f -iname '*.sql')
 
 
+.PHONY: test-cli
+test-cli: GOTEST_ARGS+=--tags=clitest
+test-cli: build
+	$(GO) test ./tests/cli -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
+
+
 MANUAL_TEST_PORT=2222
 MANUAL_TEST_SOCKET=/tmp/pond-secrets-test.socket
 MANUAL_TEST_KEY=tests/keys/storage
