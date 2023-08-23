@@ -5,6 +5,7 @@
 package clitest
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,7 +18,10 @@ import (
 // quasi-chroot environment (no root privileges required)
 //
 // Binaries corresponding to the provided commands will be added to new rootfs
-// automatically. All other files must be listed explicitly.
+// automatically. If any of command arguments contains a path to an existing file,
+// that file will be copied to new rootfs automatically too.
+//
+// All other files must be listed explicitly.
 // Since target rootfs is by default completely empty, all shared libraries
 // must be copied explicitly.
 func New(commands [][]string, files []string) (*Test, error) {
@@ -59,13 +63,25 @@ func (t *Test) setup() error {
 		if len(cmd) == 0 {
 			return fmt.Errorf("encountered empty command in sequence")
 		}
+
+		// Copy executables
 		exe, err := exec.LookPath(cmd[0])
 		if err != nil {
 			return err
 		}
 		chroot[exe] = struct{}{}
+
+		// Copy files mentioned on command line
+		for _, arg := range cmd[1:] {
+			_, err = os.Stat(arg)
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			chroot[arg] = struct{}{}
+		}
 	}
 	for _, file := range t.files {
+		// Copy extra files
 		chroot[file] = struct{}{}
 	}
 	for src := range chroot {
