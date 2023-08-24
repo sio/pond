@@ -66,7 +66,9 @@ func (s *Sandbox) CommandWithLibs(args ...string) {
 // Add file to the sandbox environment
 func (s *Sandbox) Add(filename ...string) {
 	if s.files == nil {
+		s.lock.Lock()
 		s.files = make(map[string]none)
+		s.lock.Unlock()
 	}
 	for _, file := range filename {
 		s.files[file] = none{}
