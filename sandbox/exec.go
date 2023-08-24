@@ -104,3 +104,8 @@ func (r *Result) Output() []byte {
 func (r *Result) ExitCode() int {
 	return r.exit
 }
+
+// Check if all commands executed without errors
+func (r *Result) Ok() bool {
+	return r.exit == 0 && len(r.Stderr()) == 0
+}
