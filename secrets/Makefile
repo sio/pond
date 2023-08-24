@@ -14,7 +14,7 @@ $(EXE): $(shell find . -type f -iname '*.sql')
 
 
 .PHONY: test-cli
-test-cli: GOTEST_ARGS+=--tags=sandbox
+test-cli: GOTEST_ARGS+=--tags=test_cli
 test-cli: build
 	$(GO) test ./tests/cli -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
 

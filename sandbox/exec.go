@@ -16,54 +16,58 @@ var chroot = []string{
 	"--fork",
 }
 
-// Execute test commands one by one until the first failure.
+// Execute scheduled commands one by one until the first failure.
 //
-// Return error only if something goes terribly wrong.
-//
-// If one of commands returns non-zero exit code, this function will return nil.
-// Use (*Test).ExitCode(), (*Test).Stdout(), (*Test).Stderr(), (*Test).Output()
-// to check execution results.
-func (t *Test) Execute() error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+// Return error only if something goes terribly wrong, use (*Result) to check
+// commands status and output.
+func (s *Sandbox) Execute() (*Result, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
-	for _, cmd := range t.commands {
-		next, err := t.exec(cmd)
+	if s.tmpdir == "" {
+		err := s.build()
 		if err != nil {
-			return fmt.Errorf("%v: %w", cmd, err)
+			return nil, err
+		}
+	}
+
+	result := new(Result)
+	for _, cmd := range s.commands {
+		next, err := s.exec(cmd, result)
+		if err != nil {
+			return nil, fmt.Errorf("%v: %w", cmd, err)
 		}
 		if !next {
 			break
 		}
 	}
-	return nil
+	return result, nil
 }
 
 // Execute a single command from test sequence
-func (t *Test) exec(command []string) (next bool, err error) {
-	var exe = make([]string, len(chroot)+1+len(command))
-	copy(exe, chroot)
-	exe[len(chroot)] = "--root=" + t.tmpdir
-	copy(exe[len(chroot)+1:], command)
+func (s *Sandbox) exec(command []string, result *Result) (next bool, err error) {
+	var args = make([]string, len(chroot)+1+len(command))
+	copy(args, chroot)
+	args[len(chroot)] = "--root=" + s.tmpdir
+	copy(args[len(chroot)+1:], command)
 
-	path, err := exec.LookPath(exe[0])
+	path, err := exec.LookPath(args[0])
 	if err != nil {
 		return false, err
 	}
-	t.output.Write(stdout, []byte(fmt.Sprintf(
+	result.output.Write(stdout, []byte(fmt.Sprintf(
 		"$ %s\n",
 		strings.Join(command, " "),
 	)))
 	var cmd = exec.Cmd{
 		Path:   path,
-		Args:   exe,
-		Stdout: t.output.Writer(stdout),
-		Stderr: t.output.Writer(stderr),
+		Args:   args,
+		Stdout: result.output.Writer(stdout),
+		Stderr: result.output.Writer(stderr),
 	}
 	err = cmd.Run()
 	if exit, ok := err.(*exec.ExitError); ok {
-		t.exit = new(int)
-		*t.exit = exit.ExitCode()
+		result.exit = exit.ExitCode()
 		return false, nil
 	}
 	if err != nil {
@@ -72,27 +76,31 @@ func (t *Test) exec(command []string) (next bool, err error) {
 	return true, nil
 }
 
-// Read standard output after executing test commands
-func (t *Test) Stdout() []byte {
-	return t.output.Read(stdout)
+// Result of executing commands in sandbox
+type Result struct {
+	output multiBuffer
+	exit   int
 }
 
-// Read standard error output after executing test commands
-func (t *Test) Stderr() []byte {
-	return t.output.Read(stderr)
+// Read standard output
+func (r *Result) Stdout() []byte {
+	return r.output.Read(stdout)
 }
 
-// Read output after executing test commands (stdout + stderr)
-func (t *Test) Output() []byte {
-	return t.output.ReadAll()
+// Read standard error
+func (r *Result) Stderr() []byte {
+	return r.output.Read(stderr)
+}
+
+// Read all output (stdout and stderr)
+func (r *Result) Output() []byte {
+	return r.output.ReadAll()
 }
 
 // Exit code of test command sequence.
 //
 // Since execution stops at first failed command, this is either zero if all
 // commands were successful or contains the exit code of first failed command.
-//
-// This function will panic if called before (*Test).Execute()
-func (t *Test) ExitCode() int {
-	return *t.exit
+func (r *Result) ExitCode() int {
+	return r.exit
 }

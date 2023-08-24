@@ -1,4 +1,4 @@
-//go:build sandbox
+//go:build test_cli
 package cli
 
 import (
@@ -14,25 +14,18 @@ var secretctl = fmt.Sprintf("bin/secretctl@%s-%s", runtime.GOOS, runtime.GOARCH)
 
 func TestRepoInitialization(t *testing.T) {
 	os.Chdir("../..")
-	cli, err := sandbox.New(
-		[][]string{
-			{secretctl, "init", "tests/keys/master.pub"},
-		},
-		nil,
-	)
+	sandbox := sandbox.Sandbox{}
+	t.Cleanup(sandbox.Cleanup)
+	sandbox.Command(secretctl, "init", "tests/keys/master.pub")
+	result, err := sandbox.Execute()
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(cli.Cleanup)
-	err = cli.Execute()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cli.ExitCode() != 0 {
-		t.Logf("Exit code: %d", cli.ExitCode())
-		t.Logf("Stdout:\n%s", string(cli.Stdout()))
-		t.Logf("Stderr:\n%s", string(cli.Stderr()))
-		t.Logf("Combined:\n%s", string(cli.Output()))
+	if result.ExitCode() != 0 {
+		t.Logf("Exit code: %d", result.ExitCode())
+		t.Logf("Stdout:\n%s", string(result.Stdout()))
+		t.Logf("Stderr:\n%s", string(result.Stderr()))
+		t.Logf("Combined:\n%s", string(result.Output()))
 		t.FailNow()
 	}
 }
