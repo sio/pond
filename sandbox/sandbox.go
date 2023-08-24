@@ -38,9 +38,7 @@ func (s *Sandbox) Command(args ...string) {
 	// Add executable
 	exe, err := exec.LookPath(args[0])
 	if err != nil {
-		s.lock.Lock()
-		s.errors = append(s.errors, err)
-		s.lock.Unlock()
+		s.deferError(fmt.Errorf("path lookup for %s: %w", args[0], err))
 		return
 	}
 	s.Add(exe)
@@ -62,7 +60,21 @@ func (s *Sandbox) Command(args ...string) {
 
 // Schedule a command for execution in a sandbox and copy required shared libraries
 func (s *Sandbox) CommandWithLibs(args ...string) {
-	panic("not implemented")
+	if len(args) == 0 {
+		return
+	}
+	exe, err := exec.LookPath(args[0])
+	if err != nil {
+		s.deferError(fmt.Errorf("path lookup for %q: %w", args[0], err))
+		return
+	}
+	libs, err := ldd(exe)
+	if err != nil {
+		s.deferError(fmt.Errorf("ldd %q: %w", args[0], err))
+		return
+	}
+	s.Add(libs...)
+	s.Command(args...)
 }
 
 // Add file to the sandbox environment
@@ -112,6 +124,12 @@ func (s *Sandbox) build() error {
 		}
 	}
 	return nil
+}
+
+func (s *Sandbox) deferError(e error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.errors = append(s.errors, e)
 }
 
 // Clean up sandbox environment after executing the test
