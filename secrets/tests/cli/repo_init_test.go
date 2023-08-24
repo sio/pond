@@ -1,31 +1,50 @@
 //go:build test_cli
+
 package cli
 
 import (
-	"testing"
 	"sandbox"
+	"testing"
 
-	"runtime"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 )
 
 var secretctl = fmt.Sprintf("bin/secretctl@%s-%s", runtime.GOOS, runtime.GOARCH)
 
 func TestRepoInitialization(t *testing.T) {
 	os.Chdir("../..")
-	sandbox := sandbox.Sandbox{}
+
+	sandbox := new(sandbox.Sandbox)
 	t.Cleanup(sandbox.Cleanup)
-	sandbox.Command(secretctl, "init", "tests/keys/master.pub")
+	sandbox.Command(secretctl, "-C", "/repo", "init", "tests/keys/master.pub")
+	err := sandbox.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sandbox.Mkdir("/repo", 0777)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agent, err := sshAgent(sandbox, "tests/keys/master")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(agent.Stop)
+
 	result, err := sandbox.Execute()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.ExitCode() != 0 {
+	if !result.Ok() {
 		t.Logf("Exit code: %d", result.ExitCode())
-		t.Logf("Stdout:\n%s", string(result.Stdout()))
-		t.Logf("Stderr:\n%s", string(result.Stderr()))
-		t.Logf("Combined:\n%s", string(result.Output()))
+		t.Logf("Output:\n%s", string(result.Output()))
 		t.FailNow()
+	}
+	if !strings.Contains(string(result.Output()), "Initialized new secrets repository: /repo") {
+		t.Fatalf("unexpected output after successful execution:\n%s", string(result.Output()))
 	}
 }
