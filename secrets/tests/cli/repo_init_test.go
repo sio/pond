@@ -1,9 +1,9 @@
-//go:build clitest
+//go:build sandbox
 package cli
 
 import (
 	"testing"
-	"clitest"
+	"sandbox"
 
 	"runtime"
 	"fmt"
@@ -14,7 +14,7 @@ var secretctl = fmt.Sprintf("bin/secretctl@%s-%s", runtime.GOOS, runtime.GOARCH)
 
 func TestRepoInitialization(t *testing.T) {
 	os.Chdir("../..")
-	cli, err := clitest.New(
+	cli, err := sandbox.New(
 		[][]string{
 			{secretctl, "init", "tests/keys/master.pub"},
 		},

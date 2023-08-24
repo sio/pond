@@ -2,7 +2,7 @@
 //
 // Works only on Linux, does not require superuser privileges.
 // Requires "unshare" from util-linux to be present in $PATH.
-package clitest
+package sandbox
 
 import (
 	"errors"
@@ -53,7 +53,7 @@ func (t *Test) setup() error {
 	defer t.lock.Unlock()
 
 	var err error
-	t.tmpdir, err = os.MkdirTemp("", "clitest_*")
+	t.tmpdir, err = os.MkdirTemp("", "sandbox_*")
 	if err != nil {
 		return err
 	}

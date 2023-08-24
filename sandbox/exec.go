@@ -1,4 +1,4 @@
-package clitest
+package sandbox
 
 import (
 	"fmt"
