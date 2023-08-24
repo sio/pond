@@ -27,11 +27,13 @@ func sshAgent(s *sandbox.Sandbox, key ...string) (*agent, error) {
 	}
 	err = agent.Start()
 	if err != nil {
+		agent.Stop()
 		return nil, err
 	}
 	for _, k := range key {
 		err = agent.Add(k)
 		if err != nil {
+			agent.Stop()
 			return nil, err
 		}
 	}
