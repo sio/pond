@@ -56,15 +56,15 @@ func out(dest io.Writer, message any, args ...any) {
 	var s string
 	var ok bool
 	if s, ok = message.(string); !ok {
-		fmt.Fprintln(dest, message)
+		_, _ = fmt.Fprintln(dest, message)
 		return
 	}
 	if len(s) > 0 && s[len(s)-1] != '\n' {
 		s += "\n"
 	}
 	if len(args) == 0 {
-		fmt.Fprintf(dest, s)
+		_, _ = fmt.Fprint(dest, s)
 		return
 	}
-	fmt.Fprintf(dest, s, args...)
+	_, _ = fmt.Fprintf(dest, s, args...)
 }

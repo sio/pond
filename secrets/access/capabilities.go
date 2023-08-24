@@ -4,10 +4,10 @@ type Capability string
 
 const (
 	ManageWriters Capability = "pond/secrets: manage write access"
-	ManageReaders            = "pond/secrets: manage read access"
-	Read                     = "pond/secrets: read secrets"
-	Write                    = "pond/secrets: write secrets"
-	Master                   = "pond/secrets: master key"
+	ManageReaders Capability = "pond/secrets: manage read access"
+	Read          Capability = "pond/secrets: read secrets"
+	Write         Capability = "pond/secrets: write secrets"
+	Master        Capability = "pond/secrets: master key"
 )
 
 func (c Capability) Admin() bool {

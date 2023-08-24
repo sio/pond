@@ -96,7 +96,10 @@ func (c *Conn) Close() error {
 func (c *Conn) connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.Close()
+	err := c.Close()
+	if err != nil {
+		return err
+	}
 	saddr := os.Getenv("SSH_AUTH_SOCK")
 	if saddr == "" {
 		return fmt.Errorf("environment variable not set: SSH_AUTH_SOCK")

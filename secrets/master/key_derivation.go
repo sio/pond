@@ -59,5 +59,5 @@ func clean(b []byte) {
 	for i := 0; i < len(b); i++ {
 		b[i] = 0
 	}
-	rand.Read(b)
+	_, _ = rand.Read(b)
 }
