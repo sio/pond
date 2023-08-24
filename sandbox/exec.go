@@ -62,6 +62,7 @@ func (s *Sandbox) exec(command []string, result *Result) (next bool, err error) 
 	var cmd = exec.Cmd{
 		Path:   path,
 		Args:   args,
+		Env:    s.env,
 		Stdout: result.output.Writer(stdout),
 		Stderr: result.output.Writer(stderr),
 	}

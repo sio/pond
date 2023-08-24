@@ -18,6 +18,7 @@ import (
 type Sandbox struct {
 	commands [][]string
 	files    map[string]none
+	env      []string
 	tmpdir   string
 	lock     sync.Mutex
 	errors   []error
