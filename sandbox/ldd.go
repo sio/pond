@@ -25,9 +25,9 @@ func ldd(path string) (libs []string, err error) {
 		match := lddArrowName.FindSubmatch(line)
 		if len(match) != 2 {
 			match = lddPlainName.FindSubmatch(line)
-			if len(match) != 2 {
-				return nil, fmt.Errorf("unable to parse line: %s", string(line))
-			}
+		}
+		if len(match) != 2 {
+			return nil, fmt.Errorf("unable to parse line: %s", string(line))
 		}
 		lib := string(match[1])
 		_, err = os.Stat(lib)
