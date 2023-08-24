@@ -20,6 +20,7 @@ type Sandbox struct {
 	files    map[string]none
 	env      []string
 	tmpdir   string
+	chdir    string
 	lock     sync.Mutex
 	errors   []error
 }
@@ -113,7 +114,7 @@ func (s *Sandbox) build() error {
 	return nil
 }
 
-// Clean up chroot environment after executing the test
+// Clean up sandbox environment after executing the test
 func (s *Sandbox) Cleanup() {
 	s.lock.Lock()
 	defer s.lock.Unlock()

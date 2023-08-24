@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var chroot = []string{
+var unshare = []string{
 	"unshare",
 	"--map-root-user",
 	"unshare",
@@ -14,6 +14,8 @@ var chroot = []string{
 	"--net",
 	"--pid",
 	"--fork",
+	"--wd=/",
+	"--root=",
 }
 
 // Execute scheduled commands one by one until the first failure.
@@ -44,12 +46,24 @@ func (s *Sandbox) Execute() (*Result, error) {
 	return result, nil
 }
 
+// Change working directory for sandbox commands
+func (s *Sandbox) Chdir(path string) {
+	s.chdir = path
+}
+
 // Execute a single command from test sequence
 func (s *Sandbox) exec(command []string, result *Result) (next bool, err error) {
-	var args = make([]string, len(chroot)+1+len(command))
-	copy(args, chroot)
-	args[len(chroot)] = "--root=" + s.tmpdir
-	copy(args[len(chroot)+1:], command)
+	var args = make([]string, len(unshare)+len(command))
+	copy(args, unshare)
+	copy(args[len(unshare):], command)
+	if s.chdir != "" {
+		err = s.Mkdir(s.chdir, 0777)
+		if err != nil {
+			return false, err
+		}
+		args[len(unshare)-2] = "--wd=" + s.chdir
+	}
+	args[len(unshare)-1] = "--root=" + s.tmpdir
 
 	path, err := exec.LookPath(args[0])
 	if err != nil {
