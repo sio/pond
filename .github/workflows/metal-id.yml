@@ -16,6 +16,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: metal-id
     steps:
       - uses: actions/checkout@v3
         with:
