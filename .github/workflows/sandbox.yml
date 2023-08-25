@@ -1,16 +1,16 @@
-name: metal-id
+name: sandbox
 
 on:
   push:
     paths:
-      - 'metal-id/**'
-      - '.github/workflows/metal-id*'
+      - 'sandbox/**'
+      - '.github/workflows/sandbox*'
   pull_request:
     paths:
-      - 'metal-id/**'
-      - '.github/workflows/metal-id*'
+      - 'sandbox/**'
+      - '.github/workflows/sandbox*'
   schedule:
-    - cron: '15 14 1 * *'
+    - cron: '22 1 5 * *'
   workflow_dispatch:
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: metal-id
+        working-directory: sandbox
     steps:
       - uses: actions/checkout@v3
         with:
@@ -31,5 +31,4 @@ jobs:
           key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             golang-${{ runner.os }}
-      - run: make lint test build
-      - run: bin/metal-id@linux-amd64 -v
+      - run: make lint test
