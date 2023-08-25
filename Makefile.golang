@@ -135,20 +135,25 @@ import-tree:  ## print import tree in Graphviz dot format
 
 .PHONY: help
 help:  ## show help message
-	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST)) | column -t -s '	'
+	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST))
 
 define HELP_AWK
+BEGIN {
+	width = 12;
+	print("Available targets:");
+}
 /  ##/ {
 	if (stop) exit;
 
 	match($$0, /^[^:]+:/);
 	target = substr($$0, RSTART, RLENGTH-1);
 	gsub(" ", ",", target);
+	if (length(target) > width) width = length(target);
 
 	match($$0, /  ## /);
 	help = substr($$0, RSTART + RLENGTH);
 
-	printf("%s\t%s\n", target, help);
+	printf("  %-*s %s\n", width+1, target, help);
 }
 /HELP_AWK/ {
 	stop = 1;
