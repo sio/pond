@@ -10,7 +10,7 @@ on:
       - 'sandbox/**'
       - '.github/workflows/sandbox*'
   schedule:
-    - cron: '22 1 5 * *'
+    - cron: '17 6 25 * *'
   workflow_dispatch:
 
 jobs:
