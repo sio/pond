@@ -18,7 +18,7 @@ import (
 
 // Start ssh-agent server and load private keys
 func sshAgent(box *sandbox.Sandbox, key ...string) (*agentServer, error) {
-	const innerSocket = "/ssh-agentServer.sock"
+	const innerSocket = "/ssh-agent.sock"
 	box.Setenv("SSH_AUTH_SOCK", innerSocket)
 	socket, err := box.Path(innerSocket)
 	if err != nil {
