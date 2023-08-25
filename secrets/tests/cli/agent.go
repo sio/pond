@@ -5,110 +5,165 @@ package cli
 import (
 	"sandbox"
 
-	"bytes"
-	"errors"
+	"context"
+	"crypto/rand"
 	"fmt"
+	"net"
 	"os"
-	"os/exec"
-	"regexp"
-	"strconv"
+	"time"
+
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
-// Start ssh-agent and load private keys
-func sshAgent(s *sandbox.Sandbox, key ...string) (*agent, error) {
-	const innerSocket = "/ssh-agent.sock"
-	s.Setenv("SSH_AUTH_SOCK", innerSocket)
-	socket, err := s.Path(innerSocket)
+// Start ssh-agent server and load private keys
+func sshAgent(box *sandbox.Sandbox, key ...string) (*agentServer, error) {
+	const innerSocket = "/ssh-agentServer.sock"
+	box.Setenv("SSH_AUTH_SOCK", innerSocket)
+	socket, err := box.Path(innerSocket)
 	if err != nil {
 		return nil, err
 	}
-	agent := &agent{
+	server := &agentServer{
 		socket: socket,
 	}
-	err = agent.Start()
-	if err != nil {
-		agent.Stop()
-		return nil, err
-	}
 	for _, k := range key {
-		err = agent.Add(k)
+		err = server.LoadKey(k)
 		if err != nil {
-			agent.Stop()
 			return nil, err
 		}
 	}
-	return agent, nil
+	go server.Serve()
+	return server, server.Err()
 }
 
-// ssh-agent process that is accessible both inside and outside the sandbox
-type agent struct {
-	socket string
-	pid    int
+// ssh-agent server that is accessible both inside and outside the sandbox
+type agentServer struct {
+	socket   string
+	keys     map[string]ssh.Signer
+	listener *net.UnixListener
+	cancel   context.CancelFunc
+	err      error
 }
 
-var agentPidRegex = regexp.MustCompile(`SSH_AGENT_PID=(\d+)`)
+var _ agent.Agent = new(agentServer)
 
-func (a *agent) Start() error {
-	launcher := exec.Command("ssh-agent", "-a", a.socket)
-	var output = new(bytes.Buffer)
-	launcher.Stdout = output
-	launcher.Stderr = output
-	err := launcher.Run()
+func (s *agentServer) Serve() {
+	if s.listener != nil {
+		panic("agentServer is not reentrant")
+	}
+	l, err := net.Listen("unix", s.socket)
 	if err != nil {
-		return err
-	}
-	match := agentPidRegex.FindSubmatch(output.Bytes())
-	if len(match) < 2 {
-		return errors.New("SSH_AGENT_PID not found in launcher output")
-	}
-	a.pid, err = strconv.Atoi(string(match[1]))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *agent) Stop() {
-	if a.pid == 0 {
+		s.err = err
 		return
 	}
-	process, err := os.FindProcess(a.pid)
-	if err != nil {
-		return
-	}
-	_ = process.Kill()
-	a.pid = 0
-}
+	defer func() { _ = l.Close() }()
+	s.listener = l.(*net.UnixListener)
 
-func (a *agent) Add(keypath string) error {
-	// Test keys are often world-readable. Fix that silently
-	stat, err := os.Stat(keypath)
-	if err != nil {
-		return err
-	}
-	const (
-		visible = 0077
-		private = 0700
-	)
-	if stat.Mode()&visible != 0 {
-		err = os.Chmod(keypath, stat.Mode()&private)
-		if err != nil {
-			return err
+	var ctx context.Context
+	ctx, s.cancel = context.WithCancel(context.Background())
+
+	for {
+		select {
+		case <-ctx.Done():
+			s.err = ctx.Err()
+			return
+		default:
 		}
+		err := s.listener.SetDeadline(time.Now().Add(time.Second))
+		if err != nil {
+			s.err = err
+			return
+		}
+		conn, err := s.listener.Accept()
+		if os.IsTimeout(err) {
+			continue
+		}
+		if err != nil {
+			s.err = err
+			return
+		}
+		go func() {
+			_ = agent.ServeAgent(s, conn)
+			_ = conn.Close()
+		}()
 	}
+}
 
-	// Add key to ssh-agent
-	add := exec.Command("ssh-add", keypath)
-	add.Env = append(
-		os.Environ(),
-		fmt.Sprintf("SSH_AUTH_SOCK=%s", a.socket),
-	)
-	var output = new(bytes.Buffer)
-	add.Stdout = output
-	add.Stderr = output
-	err = add.Run()
-	if err != nil {
-		return fmt.Errorf("%w:\n%s", err, output.String())
+func (s *agentServer) Stop() {
+	if s.cancel != nil {
+		s.cancel()
 	}
+	if s.listener != nil {
+		_ = s.listener.Close()
+	}
+}
+
+func (s *agentServer) LoadKey(path string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	key, err := ssh.ParsePrivateKey(raw)
+	if err != nil {
+		return err
+	}
+	fingerprint := ssh.FingerprintSHA256(key.PublicKey())
+	if s.keys == nil {
+		s.keys = make(map[string]ssh.Signer)
+	}
+	s.keys[fingerprint] = key
 	return nil
+}
+
+func (s *agentServer) Err() error {
+	return s.err
+}
+
+func (s *agentServer) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
+	fingerprint := ssh.FingerprintSHA256(key)
+	private, exists := s.keys[fingerprint]
+	if !exists {
+		return nil, fmt.Errorf("ssh-agent: key not found: %s", fingerprint)
+	}
+	return private.Sign(rand.Reader, data)
+}
+
+func (s *agentServer) List() ([]*agent.Key, error) {
+	keys := make([]*agent.Key, len(s.keys))
+	var i int
+	for _, k := range s.keys {
+		keys[i] = sshKeyToAgentKey(k.PublicKey())
+		i++
+	}
+	return keys, nil
+}
+
+func sshKeyToAgentKey(pub ssh.PublicKey) *agent.Key {
+	return &agent.Key{
+		Format:  pub.Type(),
+		Blob:    pub.Marshal(),
+		Comment: "",
+	}
+}
+
+// The rest of ssh-agent features are intentionally not implemented.
+// We have no need for them in our tests.
+func (s *agentServer) Add(key agent.AddedKey) error {
+	panic("not implemented: Add()")
+}
+func (s *agentServer) Remove(key ssh.PublicKey) error {
+	panic("not implemented: Remove()")
+}
+func (s *agentServer) RemoveAll() error {
+	panic("not implemented: RemoveAll()")
+}
+func (s *agentServer) Lock(passphrase []byte) error {
+	panic("not implemented: Lock()")
+}
+func (s *agentServer) Unlock(passphrase []byte) error {
+	panic("not implemented: Unlock()")
+}
+func (s *agentServer) Signers() ([]ssh.Signer, error) {
+	panic("not implemented: Signers()")
 }

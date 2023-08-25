@@ -47,4 +47,7 @@ func TestRepoInitialization(t *testing.T) {
 	if !strings.Contains(string(result.Output()), "Initialized new secrets repository: /repo") {
 		t.Fatalf("unexpected output after successful execution:\n%s", string(result.Output()))
 	}
+	if testing.Verbose() {
+		t.Logf("\n%s", string(result.Output()))
+	}
 }
