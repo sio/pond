@@ -1,0 +1,21 @@
+name: metal-id
+
+on:
+  push:
+    paths:
+      - 'metal-id/**'
+  pull_request:
+    paths:
+      - 'metal-id/**'
+  schedule:
+    - cron: '15 14 1 * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: make lint test build
+      - run: bin/metal-id@linux-amd64 -v
