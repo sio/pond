@@ -32,5 +32,4 @@ jobs:
           restore-keys: |
             golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
             golang-${{ runner.os }}
-      - run: make lint test build
-      - run: bin/metal-id@linux-amd64 -v
+      - run: make ci
