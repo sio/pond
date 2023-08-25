@@ -119,9 +119,13 @@ END {
 	print "}";
 }
 /\.go:/ {
-	match($$1,/(.*)\//,parent);
-	match($$2,/$(GOMODULE)\/(.*)"/,child);
-	print "\t\"" parent[1] "\" -> \"" child[1] "\"";
+	match($$1, /[^/]*$$/);
+	parent = substr($$1, 0, RSTART-2);
+
+	match($$2, /$(GOMODULE)/);
+	child = substr($$2, RSTART+RLENGTH+1, length($$2)-RSTART-RLENGTH-1);
+
+	print "\t\"" parent "\" -> \"" child "\"";
 }
 endef
 export import_tree_awk
