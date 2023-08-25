@@ -45,8 +45,13 @@ func (s *Sandbox) Command(args ...string) {
 
 	// Add files mentioned on command line
 	for _, arg := range args[1:] {
-		_, err = os.Stat(arg)
+		stat, err := os.Stat(arg)
 		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if stat.IsDir() {
+			// Directories mentioned on command line are not copied automatically,
+			// it may be too costly and not what caller intended.
 			continue
 		}
 		s.Add(arg)
