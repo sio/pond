@@ -28,7 +28,8 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-sandbox
           restore-keys: |
+            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
             golang-${{ runner.os }}
       - run: make lint test
