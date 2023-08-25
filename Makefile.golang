@@ -110,20 +110,35 @@ $(CLOC):
 loc: $(CLOC)  ## count lines of code
 	$(CLOC) .
 
-GOMODULE=$(shell grep -oP "(?<=module ).*" go.mod)
+GOMODULE=$(shell awk '/^[^[:alnum:]]*module[^[:alnum:]]/ { print $$2; exit; }' go.mod)
 define import_tree_awk
 BEGIN {
 	print "strict digraph import_tree {";
+	module = "$(GOMODULE)";
+	match(module, /\/[^/]*$$/);
+	if (RSTART == 0) {
+		root = module;
+		top = module;
+	} else {
+		root = substr(module, 0, RSTART-1);
+		top = substr(module, RSTART+1, length(module)-RSTART);
+	};
 }
 END {
+	if (seen_top) printf("\t{ rank=source; \"%s\"; }\n", top);
 	print "}";
 }
 /\.go:/ {
 	match($$1, /[^/]*$$/);
 	parent = substr($$1, 0, RSTART-2);
+	if (parent == "") parent = top;
 
-	match($$2, /$(GOMODULE)/);
-	child = substr($$2, RSTART+RLENGTH+1, length($$2)-RSTART-RLENGTH-1);
+	child = substr($$2, length(root)+3, length($$2)-length(root)-3);
+	if (child == "") child = top;
+
+	if (parent == top || child == top) {
+		seen_top = 1;
+	};
 
 	print "\t\"" parent "\" -> \"" child "\"";
 }
@@ -131,7 +146,7 @@ endef
 export import_tree_awk
 .PHONY: import-tree
 import-tree:  ## print import tree in Graphviz dot format
-	@git grep '"$(GOMODULE)/' | sort -u | awk "$$import_tree_awk"
+	@git grep -P '^\s*(import|)\s*"$(GOMODULE)' | sort -u | awk "$$import_tree_awk"
 
 .PHONY: help
 help:  ## show help message
