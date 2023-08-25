@@ -4,11 +4,14 @@ on:
   push:
     paths:
       - 'metal-id/**'
+      - '.github/workflows/metal-id*'
   pull_request:
     paths:
       - 'metal-id/**'
+      - '.github/workflows/metal-id*'
   schedule:
     - cron: '15 14 1 * *'
+  workflow_dispatch:
 
 jobs:
   test:
