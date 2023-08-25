@@ -17,7 +17,7 @@ func TestPathTraversal(t *testing.T) {
 	result, err := box.Execute()
 	if err == nil {
 		output := string(result.Output())
-		t.Logf("Successfully executed command that attempts to traverse sandbox path:%s", output)
+		t.Logf("Successfully executed command that attempts to traverse sandbox path:\n%s", output)
 		t.Logf("Exit code: %d", result.ExitCode())
 		t.FailNow()
 	}
