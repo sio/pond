@@ -78,7 +78,7 @@ $(ERRCHECK):
 .PHONY: lint
 lint: $(STATICCHECK) $(ERRCHECK)
 lint:  ## run linters
-	$(GO) fmt $(EVERYTHING)
+	test -z "$$("$(shell $(GO) env GOROOT)/bin/gofmt" -d . | tee /dev/tty)"
 	$(GO) vet $(EVERYTHING)
 	$(STATICCHECK) $(EVERYTHING)
 	$(ERRCHECK) $(EVERYTHING)
