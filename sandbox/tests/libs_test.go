@@ -11,6 +11,7 @@ func TestWithLibs(t *testing.T) {
 	box := new(sandbox.Sandbox)
 	t.Cleanup(box.Cleanup)
 	box.CommandWithLibs("sh", "-c", `echo "Shell: $0; PID: $$"`)
+	box.CommandWithLibs("cat", "libs_test.go")
 	box.CommandWithLibs("du", "-sh", "/")
 	box.CommandWithLibs("find", "/")
 	result, err := box.Execute()
