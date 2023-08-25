@@ -46,6 +46,7 @@ build-all:  ## build all OS/architectures
 .PHONY: fmt
 fmt:  ## format Go code
 	$(GO) fmt $(EVERYTHING)
+	"$(shell $(GO) env GOROOT)/bin/gofmt" -l -w .
 
 go.sum:
 	$(GO) mod tidy
