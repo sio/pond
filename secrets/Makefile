@@ -20,7 +20,7 @@ test-cli: build
 
 
 .PHONY: test-docs
-test-docs: GOTEST_ARGS+=--tags=docs
+test-docs: GOTEST_ARGS+=--tags=docs --count=1
 test-docs: build
 	$(GO) test ./tests/help -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
 	git diff --exit-code -- docs/
