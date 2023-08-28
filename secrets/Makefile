@@ -27,7 +27,7 @@ test-docs: build
 
 
 .PHONY: ci
-ci: lint test test-cli
+ci: lint test test-cli test-docs
 
 
 .PHONY: review-crypto-algorithms
