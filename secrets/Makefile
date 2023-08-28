@@ -19,6 +19,13 @@ test-cli: build
 	$(GO) test ./tests/cli -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
 
 
+.PHONY: test-docs
+test-docs: GOTEST_ARGS+=--tags=docs
+test-docs: build
+	$(GO) test ./tests/help -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
+	git diff --exit-code -- docs/
+
+
 .PHONY: ci
 ci: lint test test-cli
 
