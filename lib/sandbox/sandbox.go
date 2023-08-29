@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -44,7 +45,9 @@ func (s *Sandbox) Command(args ...string) {
 	s.Add(exe)
 
 	// Add files mentioned on command line
+	var longOption = regexp.MustCompile(`^--[\w-]+=(.*)$`)
 	for _, arg := range args[1:] {
+		arg = longOption.ReplaceAllString(arg, `$1`)
 		stat, err := os.Stat(arg)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
