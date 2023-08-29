@@ -10,4 +10,4 @@ require (
 
 require golang.org/x/sys v0.11.0 // indirect
 
-replace sandbox => ../sandbox
+replace sandbox => ../lib/sandbox
