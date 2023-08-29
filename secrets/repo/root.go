@@ -14,6 +14,7 @@ const (
 	adminDir   = "admin"
 	masterCert = "master.cert"
 	ext        = ".x"
+	certExt    = ".cert"
 )
 
 // Secrets repository on local filesystem
@@ -62,4 +63,9 @@ loop:
 		}
 		return path, nil
 	}
+}
+
+// Path to repository master key certificate
+func (r *Repository) MasterCert() string {
+	return filepath.Join(r.root, accessDir, masterCert)
 }

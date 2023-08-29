@@ -6,21 +6,17 @@ import (
 	"github.com/sio/pond/lib/sandbox"
 	"testing"
 
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 )
 
-var secretctl = fmt.Sprintf("bin/secretctl@%s-%s", runtime.GOOS, runtime.GOARCH)
-
-func TestRepoInitialization(t *testing.T) {
+func TestDelegateAdmin(t *testing.T) {
 	chdir()
 	sandbox := new(sandbox.Sandbox)
 	t.Cleanup(sandbox.Cleanup)
-	sandbox.Command(secretctl, "-C", "/repo", "init", "tests/keys/master.pub")
+	sandbox.Setenv("SECRETS_DIR", "/repo")
+	sandbox.Command(secretctl, "init", "tests/keys/master.pub")
+	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-rw", "/alice/")
+	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-r", "/")
 	err := sandbox.Build()
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +25,6 @@ func TestRepoInitialization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	agent, err := sshAgent(sandbox, "tests/keys/master")
 	if err != nil {
 		t.Fatal(err)
@@ -45,37 +40,19 @@ func TestRepoInitialization(t *testing.T) {
 		t.Logf("Output:\n%s", string(result.Output()))
 		t.FailNow()
 	}
+	for _, path := range []string{
+		"/repo/access/admin/alice.cert",
+		"/repo/access/admin/alice.x01.cert",
+		"/repo/access/master.cert",
+	} {
+		if !sandbox.Exists(path) {
+			t.Errorf("Expected path not found in sanbox: %s", path)
+		}
+	}
 	if !strings.Contains(string(result.Output()), "Initialized new secrets repository: /repo") {
 		t.Fatalf("unexpected output after successful execution:\n%s", string(result.Output()))
 	}
 	if testing.Verbose() {
 		t.Logf("\n%s", string(result.Output()))
-	}
-}
-
-// Switch to top-level Go project directory
-func chdir() {
-	var path string
-	var err error
-	path, err = filepath.Abs(".")
-	if err != nil {
-		panic("abs: " + err.Error())
-	}
-	for {
-		_, err = os.Stat(filepath.Join(path, "go.mod"))
-		if err == nil {
-			break
-		}
-		if !errors.Is(err, os.ErrNotExist) {
-			panic("stat: " + err.Error())
-		}
-		if path == "/" {
-			panic("could not locate Go project directory")
-		}
-		path = filepath.Dir(path)
-	}
-	err = os.Chdir(path)
-	if err != nil {
-		panic("chdir: " + err.Error())
 	}
 }

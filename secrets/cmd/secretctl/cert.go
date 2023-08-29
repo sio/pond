@@ -2,6 +2,14 @@ package main
 
 import (
 	"fmt"
+	"time"
+
+	"golang.org/x/crypto/ssh"
+
+	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/master"
+	"github.com/sio/pond/secrets/repo"
+	"github.com/sio/pond/secrets/util"
 )
 
 type CertCmd struct {
@@ -15,6 +23,63 @@ type CertCmd struct {
 }
 
 func (c *CertCmd) Run() error {
-	fmt.Println(*c)
+	recepient, err := util.LoadPublicKey(c.Key)
+	if err != nil {
+		return err
+	}
+	for _, p := range c.Path {
+		if len(p) == 0 {
+			return fmt.Errorf("empty paths not allowed")
+		}
+		if p[0] != '/' {
+			return fmt.Errorf("relative paths not allowed: %s", p)
+		}
+	}
+	if len(c.Path) == 0 {
+		return fmt.Errorf("empty path list not allowed")
+	}
+	lifetime, err := util.ParseDuration(c.Expires)
+	if err != nil {
+		return err
+	}
+	repo, err := repo.Open(".")
+	if err != nil {
+		return err
+	}
+	var path string
+	switch {
+	case c.User != "":
+		return fmt.Errorf("TODO: not implemented: issuing user certs")
+	case c.Admin != "":
+		path, err = c.delegateAdmin(repo, recepient, lifetime)
+	default:
+		return fmt.Errorf("either --user or --admin must be provided")
+	}
+	if err != nil {
+		return err
+	}
+	ok("Issued new certificate: %s", path)
 	return nil
+}
+
+func (c *CertCmd) delegateAdmin(r *repo.Repository, to ssh.PublicKey, lifetime time.Duration) (path string, err error) {
+	caps := make([]access.Capability, 0, 2)
+	if c.Read {
+		caps = append(caps, access.ManageReaders)
+	}
+	if c.Write {
+		caps = append(caps, access.ManageWriters)
+	}
+	if len(caps) == 0 {
+		return "", fmt.Errorf("at least one capability must be provided: --read, --write")
+	}
+	master, err := master.Open(r.MasterCert())
+	if err != nil {
+		return "", err
+	}
+	cert, err := master.Delegate(to, caps, c.Path, c.Admin, lifetime)
+	if err != nil {
+		return "", err
+	}
+	return r.Save(cert)
 }

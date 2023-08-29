@@ -7,11 +7,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/agent"
 )
 
 const (
@@ -22,6 +24,27 @@ const (
 type Key struct {
 	signer ssh.Signer
 	seed   []byte
+}
+
+// Open master key referenced by a certificate stored on file system
+func Open(path string) (*Key, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	public, _, _, _, err := ssh.ParseAuthorizedKey(raw)
+	if err != nil {
+		return nil, err
+	}
+	cert, ok := public.(*ssh.Certificate)
+	if !ok {
+		return nil, fmt.Errorf("not an ssh certificate (%s): %s", public.Type(), path)
+	}
+	signer, err := agent.New(cert.Key)
+	if err != nil {
+		return nil, err
+	}
+	return NewKey(signer, cert)
 }
 
 // Generate new master key certificate
