@@ -4,11 +4,11 @@ on:
   push:
     paths:
       - 'lib/sandbox/**'
-      - '.github/workflows/sandbox*'
+      - '.github/workflows/lib-sandbox*'
   pull_request:
     paths:
       - 'lib/sandbox/**'
-      - '.github/workflows/sandbox*'
+      - '.github/workflows/lib-sandbox*'
   schedule:
     - cron: '17 6 25 * *'
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-sandbox
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-lib-sandbox
           restore-keys: |
             golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
             golang-${{ runner.os }}
