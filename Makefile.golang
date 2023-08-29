@@ -117,10 +117,8 @@ BEGIN {
 	module = "$(GOMODULE)";
 	match(module, /\/[^/]*$$/);
 	if (RSTART == 0) {
-		root = module;
 		top = module;
 	} else {
-		root = substr(module, 0, RSTART-1);
 		top = substr(module, RSTART+1, length(module)-RSTART);
 	};
 }
@@ -133,7 +131,7 @@ END {
 	parent = substr($$1, 0, RSTART-2);
 	if (parent == "") parent = top;
 
-	child = substr($$2, length(root)+3, length($$2)-length(root)-3);
+	child = substr($$2, length(module)+3, length($$2)-length(module)-3);
 	if (child == "") child = top;
 
 	if (parent == top || child == top) {
