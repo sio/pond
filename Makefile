@@ -1,3 +1,9 @@
 .PHONY: ci
 ci:
-	@for dir in */; do $(MAKE) -C $$dir ci; done
+	@find \
+		-mindepth 2 \
+		-name Makefile \
+		! -execdir \
+			$(MAKE) ci \; \
+		-exec false {} + \
+		-quit
