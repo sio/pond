@@ -1,7 +1,7 @@
 package main
 
 import (
-	"metal_id"
+	"github.com/sio/pond/metal_id"
 
 	"crypto"
 	"flag"

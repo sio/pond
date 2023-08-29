@@ -1,9 +1,9 @@
 package main
 
 import (
-	"secrets/agent"
-	"secrets/master"
-	"secrets/repo"
+	"github.com/sio/pond/secrets/agent"
+	"github.com/sio/pond/secrets/master"
+	"github.com/sio/pond/secrets/repo"
 )
 
 type InitCmd struct {

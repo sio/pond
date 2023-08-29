@@ -1,4 +1,4 @@
-module metal_id
+module github.com/sio/pond/metal_id
 
 go 1.20
 

@@ -3,7 +3,7 @@
 package tests
 
 import (
-	"sandbox"
+	"github.com/sio/pond/lib/sandbox"
 	"testing"
 )
 

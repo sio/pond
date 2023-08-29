@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"secrets/util"
+	"github.com/sio/pond/secrets/util"
 )
 
 // Load public key from file system and return ssh-agent connection

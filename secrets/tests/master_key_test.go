@@ -1,7 +1,7 @@
 package tests
 
 import (
-	"secrets/master"
+	"github.com/sio/pond/secrets/master"
 	"testing"
 
 	"bytes"

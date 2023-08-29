@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/ssh"
 
-	"secrets/access"
+	"github.com/sio/pond/secrets/access"
 )
 
 const (

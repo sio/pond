@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"metal_id"
+	"github.com/sio/pond/metal_id"
 
 	"crypto"
 	"crypto/ed25519"

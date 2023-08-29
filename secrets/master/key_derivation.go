@@ -11,8 +11,8 @@ import (
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/ssh"
 
-	"secrets/access"
-	"secrets/util"
+	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/util"
 )
 
 // Derive NaCl box key pair from a deterministic SSH signer
