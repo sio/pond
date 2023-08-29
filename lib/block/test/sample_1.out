@@ -1,0 +1,18 @@
+# Block based template engine
+
+## Sample usage
+
+<!--SECTION Some special characters (​ 世界) START-->
+Special
+Characters
+Rendered
+Correctly:
+​ 世界
+<!--SECTION Some special characters (​ 世界) END-->
+
+Text outside of section blocks will be rendered as is.
+
+<!--SECTION SimpleField START-->
+hello
+world
+<!--SECTION SimpleField END-->

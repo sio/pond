@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/sio/pond/lib/block"
 )
 
 var secretctl = fmt.Sprintf("bin/secretctl@%s-%s", runtime.GOOS, runtime.GOARCH)
@@ -23,7 +25,7 @@ func TestSecretctlHelp(t *testing.T) {
 		{secretctl, "cert", "--help"},
 	}
 	os.Chdir("../..")
-	var template = new(Template)
+	var template = new(block.Template)
 	for _, cmd := range commands {
 		output, err := exec.Command(cmd[0], cmd[1:]...).Output()
 		if err != nil {

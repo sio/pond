@@ -1,0 +1,35 @@
+name: lib/block
+
+on:
+  push:
+    paths:
+      - 'lib/block/**'
+      - '.github/workflows/lib-block*'
+  pull_request:
+    paths:
+      - 'lib/block/**'
+      - '.github/workflows/lib-block*'
+  schedule:
+    - cron: '17 6 25 * *'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lib/block
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/
+            ~/go/
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-lib-block
+          restore-keys: |
+            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}
+      - run: make ci

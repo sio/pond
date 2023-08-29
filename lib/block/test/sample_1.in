@@ -1,0 +1,12 @@
+# Block based template engine
+
+## Sample usage
+
+<!--SECTION Some special characters (​ 世界) START-->
+<!--SECTION Some special characters (​ 世界) END-->
+
+Text outside of section blocks will be rendered as is.
+
+<!--SECTION SimpleField START-->
+Text inside section blocks will be overwritten.
+<!--SECTION SimpleField END-->

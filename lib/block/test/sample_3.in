@@ -1,0 +1,30 @@
+# Block based template engine
+
+## Sample usage
+
+<!--SECTION Some special characters (​ 世界) START OFFSET 3-->
+Number of OFFSET lines
+is preserved
+after the START tag
+<!--SECTION Some special characters (​ 世界) END-->
+
+And before the END tag
+
+<!--SECTION SimpleField START OFFSET 1-->
+```lang
+Text inside section blocks will be overwritten.
+```
+<!--SECTION SimpleField END OFFSET 1-->
+
+Sections may appear multiple times in the template
+
+<!--SECTION SimpleField START OFFSET 3-->
+PRESERVE 1
+PRESERVE 2
+PRESERVE 3
+Text inside section blocks will be overwritten.
+PRESERVE 4
+PRESERVE 5
+<!--SECTION SimpleField END OFFSET 2-->
+
+END OFFSET must be less than or equal to START OFFSET
