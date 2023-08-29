@@ -21,8 +21,10 @@ type Repository struct {
 	root string
 }
 
-// Absolute path to repository root
-func (r Repository) Path() string {
+func (r *Repository) String() string {
+	if len(r.root) == 0 {
+		return "<uninitialized>"
+	}
 	return r.root
 }
 

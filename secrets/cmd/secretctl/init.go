@@ -23,6 +23,6 @@ func (c *InitCmd) Run() error {
 	if err != nil {
 		return err
 	}
-	ok("Initialized new secrets repository: %s", repo.Path())
+	ok("Initialized new secrets repository: %s", repo)
 	return nil
 }
