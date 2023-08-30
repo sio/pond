@@ -15,8 +15,9 @@ func TestDelegateAdmin(t *testing.T) {
 	t.Cleanup(sandbox.Cleanup)
 	sandbox.Setenv("SECRETS_DIR", "/repo")
 	sandbox.Command(secretctl, "init", "tests/keys/master.pub")
-	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-rw", "/alice/")
-	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-r", "/")
+	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-r", "/users/alice/")
+	sandbox.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-rw", "/")
+	sandbox.Command(secretctl, "cert", "--user=bob", "--key=tests/keys/bob.pub", "-r", "/users")
 	err := sandbox.Build()
 	if err != nil {
 		t.Fatal(err)
@@ -25,7 +26,7 @@ func TestDelegateAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	agent, err := sshAgent(sandbox, "tests/keys/master")
+	agent, err := sshAgent(sandbox, "tests/keys/master", "tests/keys/alice")
 	if err != nil {
 		t.Fatal(err)
 	}

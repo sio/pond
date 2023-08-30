@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -67,5 +68,37 @@ loop:
 
 // Path to repository master key certificate
 func (r *Repository) MasterCert() string {
+	if r.root == "" {
+		return ""
+	}
 	return filepath.Join(r.root, accessDir, masterCert)
+}
+
+// Paths to user certificates
+func (r *Repository) UserCerts() []string {
+	return r.listCerts(usersDir)
+}
+
+// Paths to administrator certificates
+func (r *Repository) AdminCerts() []string {
+	return r.listCerts(adminDir)
+}
+
+func (r *Repository) listCerts(subdir string) []string {
+	if r.root == "" {
+		return nil
+	}
+	directory := filepath.Join(r.root, accessDir, subdir)
+	files, err := os.ReadDir(directory)
+	if err != nil {
+		return nil
+	}
+	var paths []string
+	for _, file := range files {
+		if !strings.HasSuffix(file.Name(), certExt) {
+			continue
+		}
+		paths = append(paths, filepath.Join(directory, file.Name()))
+	}
+	return paths
 }

@@ -3,7 +3,7 @@ CREATE TABLE ACL(
     Capability  INT8    NOT NULL,
     Path        TEXT    NOT NULL,
     ValidAfter  INTEGER NOT NULL,
-    ValidBefore INTEGER NOT NULL,
+    ValidBefore INTEGER NOT NULL
 );
 
 CREATE VIEW ValidACL AS

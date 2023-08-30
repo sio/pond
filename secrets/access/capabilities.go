@@ -10,6 +10,11 @@ const (
 	Master        Capability = "pond/secrets: master key"
 )
 
+var Required = map[Capability]Capability{
+	Read:  ManageReaders,
+	Write: ManageWriters,
+}
+
 var caps = map[Capability]uint8{
 	ManageReaders: 1,
 	ManageWriters: 2,

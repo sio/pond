@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/sio/pond/secrets/util"
@@ -26,7 +27,7 @@ func Open(path string) (*ACL, error) {
 	}
 	_, err = db.Exec(schema)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sql schema: %w", err)
 	}
 	return &ACL{master: cert, db: db}, nil
 }
@@ -76,7 +77,7 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 		remove[1],
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("sql delete: %w", err)
 	}
 	for _, path := range paths {
 		cert, err := util.LoadCertificate(path)
@@ -102,7 +103,7 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 					cert.ValidBefore,
 				)
 				if err != nil {
-					return fmt.Errorf("%w: %s: %s [%s]", err, path, p, c)
+					return fmt.Errorf("sql insert: %w: %s: %s [%s]", err, path, p, c)
 				}
 			}
 		}
@@ -143,13 +144,9 @@ func (acl *ACL) Validate(cert *ssh.Certificate, admin bool) error {
 		return fmt.Errorf("certificate was not signed by master key: %s", cert.KeyId)
 	}
 	if !admin {
-		var required = map[Capability]Capability{
-			Read:  ManageReaders,
-			Write: ManageWriters,
-		}
 		for _, p := range cert.ValidPrincipals {
 			for c := range cert.Permissions.CriticalOptions {
-				err := acl.Check(cert.SignatureKey, required[Capability(c)], p)
+				err := acl.Check(cert.SignatureKey, Required[Capability(c)], p)
 				if err != nil {
 					return fmt.Errorf("signer not valid: %w", err)
 				}

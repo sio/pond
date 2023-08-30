@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/sio/pond/secrets/access"
 	"github.com/sio/pond/secrets/master"
@@ -49,7 +52,7 @@ func (c *CertCmd) Run() error {
 	var path string
 	switch {
 	case c.User != "":
-		return fmt.Errorf("TODO: not implemented: issuing user certs")
+		path, err = c.delegateUser(repo, recepient, lifetime)
 	case c.Admin != "":
 		path, err = c.delegateAdmin(repo, recepient, lifetime)
 	default:
@@ -60,6 +63,61 @@ func (c *CertCmd) Run() error {
 	}
 	ok("Issued new certificate: %s", path)
 	return nil
+}
+
+func (c *CertCmd) delegateUser(r *repo.Repository, to ssh.PublicKey, lifetime time.Duration) (path string, err error) {
+	caps := make([]access.Capability, 0, 2)
+	if c.Read {
+		caps = append(caps, access.Read)
+	}
+	if c.Write {
+		caps = append(caps, access.Write)
+	}
+	if len(caps) == 0 {
+		return "", fmt.Errorf("at least one capability must be provided: --read, --write")
+	}
+	acl, err := access.Open(r.MasterCert())
+	if err != nil {
+		return "", err
+	}
+	err = acl.LoadAdmin(r.AdminCerts())
+	if err != nil {
+		return "", err
+	}
+	saddr := os.Getenv("SSH_AUTH_SOCK")
+	if saddr == "" {
+		return "", fmt.Errorf("environment variable not set: SSH_AUTH_SOCK")
+	}
+	socket, err := net.Dial("unix", saddr)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = socket.Close() }()
+	agent := agent.NewClient(socket)
+	signers, err := agent.Signers()
+	if err != nil {
+		return "", err
+	}
+	if len(signers) == 0 {
+		return "", fmt.Errorf("no identities available in ssh-agent")
+	}
+loop_signer:
+	for _, signer := range signers {
+		for _, capability := range caps {
+			for _, p := range c.Path {
+				err = acl.Check(signer.PublicKey(), access.Required[capability], p)
+				if err != nil {
+					continue loop_signer
+				}
+			}
+		}
+		cert, err := access.DelegateUser(signer, to, caps, c.Path, c.User, lifetime)
+		if err != nil {
+			return "", err
+		}
+		return r.Save(cert)
+	}
+	return "", fmt.Errorf("ssh-agent: not enough permissions to issue this certificate (tried %d identities)", len(signers))
 }
 
 func (c *CertCmd) delegateAdmin(r *repo.Repository, to ssh.PublicKey, lifetime time.Duration) (path string, err error) {

@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/alecthomas/kong v0.8.0
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/sio/pond/lib/block v0.0.0
 	github.com/sio/pond/lib/sandbox v0.0.0
 	golang.org/x/crypto v0.12.0
@@ -12,6 +13,6 @@ require (
 require golang.org/x/sys v0.11.0 // indirect
 
 replace (
-    github.com/sio/pond/lib/block => ../lib/block
-    github.com/sio/pond/lib/sandbox => ../lib/sandbox
+	github.com/sio/pond/lib/block => ../lib/block
+	github.com/sio/pond/lib/sandbox => ../lib/sandbox
 )
