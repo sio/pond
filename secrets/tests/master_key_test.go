@@ -2,6 +2,7 @@ package tests
 
 import (
 	"github.com/sio/pond/secrets/master"
+	"github.com/sio/pond/secrets/util"
 	"testing"
 
 	"bytes"
@@ -53,9 +54,9 @@ func TestMasterKey(t *testing.T) {
 		// ssh-keygen -Lf certPath | grep ID
 		expectedBoxKey = "JgyCPNQAml3Lcm21zXfZPYIHiFw4I/1bjhxfbX5CyV0="
 	)
-	cert, err := LocalCert(certPath)
+	cert, err := util.LoadCertificate(certPath)
 	if err != nil {
-		t.Fatalf("LocalCert: %v", err)
+		t.Fatalf("LoadCertificate: %v", err)
 	}
 	if expectedBoxKey != cert.KeyId {
 		t.Fatalf(
@@ -110,9 +111,9 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 		keyPath  = "keys/master"
 		certPath = keyPath + ".cert"
 	)
-	cert, err := LocalCert(certPath)
+	cert, err := util.LoadCertificate(certPath)
 	if err != nil {
-		b.Fatalf("LocalCert: %v", err)
+		b.Fatalf("LoadCertificate: %v", err)
 	}
 	signer, err := LocalKey(keyPath)
 	if err != nil {
@@ -213,21 +214,4 @@ func LocalKey(keyname string) (ssh.Signer, error) {
 		return nil, fmt.Errorf("%T can not be used for signatures: %w", key, err)
 	}
 	return private, nil
-}
-
-// Load certificate from file system
-func LocalCert(path string) (*ssh.Certificate, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	pubkey, _, _, _, err := ssh.ParseAuthorizedKey(raw)
-	if err != nil {
-		return nil, err
-	}
-	cert, ok := pubkey.(*ssh.Certificate)
-	if !ok {
-		return nil, fmt.Errorf("not a certificate: %s", pubkey.Type())
-	}
-	return cert, nil
 }
