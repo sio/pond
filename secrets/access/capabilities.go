@@ -10,6 +10,13 @@ const (
 	Master        Capability = "pond/secrets: master key"
 )
 
+var caps = map[Capability]uint8{
+	ManageReaders: 1,
+	ManageWriters: 2,
+	Read:          3,
+	Write:         4,
+}
+
 func (c Capability) Admin() bool {
 	switch c {
 	case ManageWriters, ManageReaders:
