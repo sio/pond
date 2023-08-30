@@ -1,4 +1,4 @@
-package test
+package tests
 
 import (
 	"github.com/sio/pond/lib/block"

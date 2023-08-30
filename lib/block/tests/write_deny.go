@@ -1,5 +1,5 @@
 //go:build !write_rendered_samples
 
-package test
+package tests
 
 var saveOutput = false
