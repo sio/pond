@@ -1,22 +1,13 @@
-name: secrets
+name: All subprojects
 
 on:
-  push:
-    paths:
-      - 'secrets/**'
-      - '.github/workflows/secrets*'
-  pull_request:
-    paths:
-      - 'secrets/**'
-      - '.github/workflows/secrets*'
+  schedule:
+    - cron: '22 1 5 * *'
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: secrets
     steps:
       - uses: actions/checkout@v3
         with:
@@ -26,8 +17,9 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-secrets
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-all-subprojects
           restore-keys: |
+            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-secrets
             golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
             golang-${{ runner.os }}
       - run: make ci
