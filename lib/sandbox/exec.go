@@ -51,6 +51,23 @@ func (s *Sandbox) Chdir(path string) {
 	s.chdir = path
 }
 
+// Execute a single command not scheduled beforehand.
+// Assumes that sandbox was already built.
+//
+// Useful for running customizable diagnostic tasks in addition to the
+// scheduled commands, and for running commands that are expected to fail.
+func (s *Sandbox) Run(args ...string) (*Result, error) {
+	if s.tmpdir == "" {
+		return nil, fmt.Errorf("sandbox not initialized")
+	}
+	result := new(Result)
+	_, err := s.exec(args, result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // Execute a single command from test sequence
 func (s *Sandbox) exec(command []string, result *Result) (next bool, err error) {
 	var args = make([]string, len(unshare)+len(command))

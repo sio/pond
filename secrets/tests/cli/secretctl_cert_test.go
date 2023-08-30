@@ -56,4 +56,21 @@ func TestDelegateAdmin(t *testing.T) {
 	if testing.Verbose() {
 		t.Logf("\n%s", string(result.Output()))
 	}
+
+	// Expected to fail
+	var fail = [][]string{
+		{secretctl, "cert", "--user=bob", "--key=tests/keys/bob.pub", "-rw", "/users"}, // alice has no permission to delegate write access to /users
+		{secretctl, "cert", "--user=bob", "--key=tests/keys/bob.pub", "-r", "/something/else"},
+	}
+	for _, cmd := range fail {
+		result, err := sandbox.Run(cmd...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.Ok() {
+			t.Errorf("expected command to fail, but it exited successfully:\n%s", string(result.Output()))
+		} else if testing.Verbose() {
+			t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+		}
+	}
 }
