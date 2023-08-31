@@ -30,6 +30,9 @@ func (k *Key) Decrypt(message []byte) (content []byte, err error) {
 
 	_, receiverKey, err := boxKey(k.signer, k.seed)
 	defer clean(receiverKey[:])
+	if err != nil {
+		return nil, err
+	}
 
 	content, ok := box.Open(nil, message[boxKeySize+boxNonceSize:], boxNonce, senderKey, receiverKey)
 	if !ok {
