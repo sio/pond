@@ -2,14 +2,12 @@ package main
 
 import (
 	"fmt"
-	"net"
-	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/agent"
 	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/repo"
 	"github.com/sio/pond/secrets/util"
@@ -84,32 +82,28 @@ func (c *CertCmd) delegateUser(r *repo.Repository, to ssh.PublicKey, lifetime ti
 	if err != nil {
 		return "", err
 	}
-	saddr := os.Getenv("SSH_AUTH_SOCK")
-	if saddr == "" {
-		return "", fmt.Errorf("environment variable not set: SSH_AUTH_SOCK")
-	}
-	socket, err := net.Dial("unix", saddr)
+	signer, err := agent.New(nil)
 	if err != nil {
 		return "", err
 	}
-	defer func() { _ = socket.Close() }()
-	agent := agent.NewClient(socket)
-	signers, err := agent.Signers()
-	if err != nil {
-		return "", err
-	}
-	if len(signers) == 0 {
+	defer func() { _ = signer.Close() }()
+	identities := signer.ListKeys()
+	if len(identities) == 0 {
 		return "", fmt.Errorf("no identities available in ssh-agent")
 	}
-loop_signer:
-	for _, signer := range signers {
+loop_id:
+	for _, id := range identities {
 		for _, capability := range caps {
 			for _, p := range c.Path {
-				err = acl.Check(signer.PublicKey(), access.Required[capability], p)
+				err = acl.Check(id, access.Required[capability], p)
 				if err != nil {
-					continue loop_signer
+					continue loop_id
 				}
 			}
+		}
+		err = signer.SetIdentity(id)
+		if err != nil {
+			return "", err
 		}
 		cert, err := access.DelegateUser(signer, to, caps, c.Path, c.User, lifetime)
 		if err != nil {
@@ -117,7 +111,7 @@ loop_signer:
 		}
 		return r.Save(cert)
 	}
-	return "", fmt.Errorf("ssh-agent: not enough permissions to issue this certificate (tried %d identities)", len(signers))
+	return "", fmt.Errorf("ssh-agent: not enough permissions to issue this certificate (tried %d identities)", len(identities))
 }
 
 func (c *CertCmd) delegateAdmin(r *repo.Repository, to ssh.PublicKey, lifetime time.Duration) (path string, err error) {
