@@ -70,6 +70,8 @@ func (c *Conn) ListKeys() []ssh.PublicKey {
 	if c.agent == nil {
 		panic("agent not initialized")
 	}
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	signers, err := c.agent.Signers()
 	if err != nil {
 		return nil
@@ -118,23 +120,27 @@ func (c *Conn) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
 			return nil, err
 		}
 	}
+
+	c.lock.RLock()
 	sig, err := c.sign(data)
+	c.lock.RUnlock()
 	if err == nil {
 		return sig, nil
 	}
+
 	c.lock.Lock()
 	err = c.check(c.connect())
 	c.lock.Unlock()
 	if err != nil {
 		return nil, err
 	}
+
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	return c.sign(data)
 }
 
 func (c *Conn) sign(data []byte) (*ssh.Signature, error) {
-	if c.lock.TryRLock() {
-		defer c.lock.RUnlock()
-	}
 	if c.agent == nil || c.key == nil {
 		return nil, fmt.Errorf("ssh-agent connection not initialized")
 	}
