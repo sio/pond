@@ -13,7 +13,7 @@ import (
 	"sort"
 )
 
-// Ascii85 is more storage efficient 25% overhead vs 33% overhead for Base64,
+// Ascii85 is more storage efficient: 25% overhead vs 33% overhead for Base64,
 // but it's noticeably slower.
 //
 // It's not worth switching from Base64 for secrets storage.
