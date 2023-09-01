@@ -42,8 +42,8 @@ func TestDelegateAdmin(t *testing.T) {
 		t.FailNow()
 	}
 	for _, path := range []string{
-		"/repo/access/admin/alice.cert",
-		"/repo/access/admin/alice.x01.cert",
+		"/repo/access/admin/alice.01.cert",
+		"/repo/access/admin/alice.02.cert",
 		"/repo/access/master.cert",
 	} {
 		if !sandbox.Exists(path) {
@@ -72,5 +72,32 @@ func TestDelegateAdmin(t *testing.T) {
 		} else if testing.Verbose() {
 			t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
 		}
+	}
+
+	// Remove (=revoke) first certificate
+	err = sandbox.Remove("/repo/access/admin/alice.01.cert")
+	if err != nil {
+		t.Fatalf("removing alice.01.cert: %v", err)
+	}
+	result, err = sandbox.Run(secretctl, "cert", "--user=bob", "--key=tests/keys/bob.pub", "-r", "/users")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Ok() {
+		t.Fatalf("issuing certificate succeeded after admin cert revokation:\n%s", string(result.Output()))
+	} else if testing.Verbose() {
+		t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+	}
+
+	// Issue a certificate for alice after one of previous certs was revoked
+	result, err = sandbox.Run(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-r", "/users/alice/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Ok() || testing.Verbose() {
+		t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+	}
+	if !result.Ok() || !strings.Contains(string(result.Output()), "alice.03.cert") {
+		t.FailNow()
 	}
 }

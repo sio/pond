@@ -33,3 +33,11 @@ func (s *Sandbox) Mkdir(path string, perm os.FileMode) error {
 	}
 	return os.MkdirAll(filepath.Join(s.tmpdir, path), perm)
 }
+
+// Remove file or directory at given path inside sandbox
+func (s *Sandbox) Remove(path string) error {
+	if s.tmpdir == "" {
+		return errNotInitialized
+	}
+	return os.RemoveAll(filepath.Join(s.tmpdir, path))
+}

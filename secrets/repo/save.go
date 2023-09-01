@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -41,25 +42,30 @@ func (r *Repository) saveCert(cert *ssh.Certificate) (path string, err error) {
 			return "", fmt.Errorf("mixing user and administrator capabilities in one cert is not supported")
 		}
 	}
+	var prefix string
 	if *isAdmin {
-		path = filepath.Join(r.root, accessDir, adminDir, cert.KeyId+certExt)
+		prefix = filepath.Join(r.root, accessDir, adminDir, cert.KeyId)
 	} else {
-		path = filepath.Join(r.root, accessDir, usersDir, cert.KeyId+certExt)
+		prefix = filepath.Join(r.root, accessDir, usersDir, cert.KeyId)
 	}
-	var backup string
-	var suffix int = 1
-	_, err = os.Stat(path)
-	for !errors.Is(err, os.ErrNotExist) {
+	const base = 36 // max base supported by FormatInt; gives 1296 sortable two-character indexes
+	var suffix int64
+	if existing, _ := filepath.Glob(prefix + "*" + certExt); len(existing) > 0 {
+		last := existing[len(existing)-1]
+		last = strings.TrimPrefix(last, prefix+".")
+		last = strings.TrimSuffix(last, certExt)
+		suffix, err = strconv.ParseInt(last, base, 64)
 		if err != nil {
-			return "", err
+			suffix = 0
 		}
-		backup, _ = strings.CutSuffix(path, certExt)
-		backup = fmt.Sprintf("%s.x%02X%s", backup, suffix, certExt)
-		_, err = os.Stat(backup)
-		suffix++
 	}
-	if backup != "" {
-		err = os.Rename(path, backup)
+	for {
+		suffix++
+		path = fmt.Sprintf("%s.%02s%s", prefix, strconv.FormatInt(suffix, base), certExt)
+		_, err = os.Stat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			break
+		}
 		if err != nil {
 			return "", err
 		}
