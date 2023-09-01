@@ -8,16 +8,13 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/util"
 )
 
 // Initialize access control list for master key certificate at provided path
 func Open(path string) (*ACL, error) {
-	cert, err := util.LoadCertificate(path)
-	if err != nil {
-		return nil, err
-	}
-	err = ValidateMasterCert(cert.Key, cert)
+	cert, err := master.LoadCertificate(path)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +31,7 @@ func Open(path string) (*ACL, error) {
 
 // Access control list
 type ACL struct {
-	master *ssh.Certificate
+	master *master.Certificate
 	db     *sql.DB
 }
 
@@ -118,7 +115,7 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 // Validate access certificate
 func (acl *ACL) Validate(cert *Certificate) error {
 	admin := cert.Admin()
-	if admin && !pubEqual(acl.master.Key, cert.SignatureKey()) {
+	if admin && !util.EqualSSH(acl.master.PublicKey(), cert.SignatureKey()) {
 		return fmt.Errorf("certificate was not signed by master key: %s", cert.Name())
 	}
 	if !admin {

@@ -1,7 +1,6 @@
 package master
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/base64"
@@ -11,13 +10,12 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/sio/pond/secrets/access"
 	"github.com/sio/pond/secrets/agent"
-	"github.com/sio/pond/secrets/util"
 )
 
 const (
 	masterCertLifetime = time.Hour * 24 * 30 * 9
+	masterTag          = "pond/secrets: master key"
 )
 
 // Master key for pond/secrets
@@ -28,11 +26,11 @@ type Key struct {
 
 // Open master key referenced by a certificate stored on file system
 func Open(path string) (*Key, error) {
-	cert, err := util.LoadCertificate(path)
+	cert, err := LoadCertificate(path)
 	if err != nil {
 		return nil, err
 	}
-	signer, err := agent.New(cert.Key)
+	signer, err := agent.New(cert.PublicKey())
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +38,7 @@ func Open(path string) (*Key, error) {
 }
 
 // Generate new master key certificate
-func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
+func NewCertificate(signer ssh.Signer) (*Certificate, error) {
 	// We use random seed larger than any hash used by ssh signatures,
 	// prefixed by a constant string to avoid collisions with other uses of ssh
 	// signature.
@@ -69,7 +67,7 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 		Reserved:    seed,
 		Permissions: ssh.Permissions{
 			CriticalOptions: map[string]string{
-				string(access.Master): "",
+				masterTag: "",
 			},
 		},
 	}
@@ -77,30 +75,37 @@ func NewCertificate(signer ssh.Signer) (*ssh.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
-	return cert, nil
+	return &Certificate{ssh: cert}, nil
 }
 
 // Initialize master key from ssh signer and a corresponding certificate
-func NewKey(signer ssh.Signer, cert *ssh.Certificate) (*Key, error) {
-	err := access.ValidateMasterCert(signer.PublicKey(), cert)
+func NewKey(signer ssh.Signer, cert *Certificate) (*Key, error) {
+	err := cert.Validate(signer.PublicKey())
 	if err != nil {
 		return nil, err
 	}
-	certBoxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
+	expected, _, err := boxKey(signer, cert.ssh.Reserved)
 	if err != nil {
 		return nil, err
 	}
-	pubkey, _, err := boxKey(signer, cert.Reserved)
-	if err != nil {
-		return nil, err
-	}
-	if !bytes.Equal(certBoxPubKey, pubkey[:]) {
+	actual := cert.SendTo()
+	if *expected != *actual {
 		return nil, fmt.Errorf("derived box key does not match the one in certificate")
 	}
-	seed := make([]byte, len(cert.Reserved))
-	copy(seed, cert.Reserved)
+	seed := make([]byte, len(cert.ssh.Reserved))
+	copy(seed, cert.ssh.Reserved)
 	return &Key{
 		signer: signer,
 		seed:   seed,
 	}, nil
+}
+
+var _ ssh.Signer = &Key{}
+
+func (k *Key) PublicKey() ssh.PublicKey {
+	return k.signer.PublicKey()
+}
+
+func (k *Key) Sign(rand io.Reader, data []byte) (*ssh.Signature, error) {
+	return k.signer.Sign(rand, data)
 }

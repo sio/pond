@@ -2,7 +2,6 @@ package tests
 
 import (
 	"github.com/sio/pond/secrets/master"
-	"github.com/sio/pond/secrets/util"
 	"testing"
 
 	"bytes"
@@ -54,15 +53,20 @@ func TestMasterKey(t *testing.T) {
 		// ssh-keygen -Lf certPath | grep ID
 		expectedBoxKey = "JgyCPNQAml3Lcm21zXfZPYIHiFw4I/1bjhxfbX5CyV0="
 	)
-	cert, err := util.LoadCertificate(certPath)
+	cert, err := master.LoadCertificate(certPath)
 	if err != nil {
 		t.Fatalf("LoadCertificate: %v", err)
 	}
-	if expectedBoxKey != cert.KeyId {
+	want, err := base64.StdEncoding.DecodeString(expectedBoxKey)
+	if err != nil {
+		t.Fatalf("base64: %v", err)
+	}
+	got := cert.SendTo()
+	if !bytes.Equal(want, got[:]) {
 		t.Fatalf(
-			"unexpected box public key:\nwant: %s\n got: %s",
-			expectedBoxKey,
-			cert.KeyId,
+			"unexpected box public key:\nwant: %x\n got: %x",
+			want,
+			got,
 		)
 	}
 	signer, err := LocalKey(keyPath)
@@ -73,10 +77,6 @@ func TestMasterKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewKey: %v", err)
 	}
-	boxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
-	if err != nil {
-		t.Fatalf("base64 decode: %v", err)
-	}
 
 	const content = "hello world!"
 
@@ -84,8 +84,7 @@ func TestMasterKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKey: %v", err)
 	}
-	var receiverPubKey = new([32]byte)
-	copy(receiverPubKey[:], boxPubKey)
+	receiverPubKey := cert.SendTo()
 	var nonce = new([24]byte)
 	_, err = io.ReadFull(rand.Reader, nonce[:])
 	if err != nil {
@@ -111,7 +110,7 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 		keyPath  = "keys/master"
 		certPath = keyPath + ".cert"
 	)
-	cert, err := util.LoadCertificate(certPath)
+	cert, err := master.LoadCertificate(certPath)
 	if err != nil {
 		b.Fatalf("LoadCertificate: %v", err)
 	}
@@ -123,12 +122,7 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 	if err != nil {
 		b.Fatalf("NewKey: %v", err)
 	}
-	boxPubKey, err := base64.StdEncoding.DecodeString(cert.KeyId)
-	if err != nil {
-		b.Fatalf("base64 decode: %v", err)
-	}
-	var receiverPubKey = new([32]byte)
-	copy(receiverPubKey[:], boxPubKey)
+	receiverPubKey := cert.SendTo()
 	senderPubKey, senderPrivKey, err := box.GenerateKey(rand.Reader)
 	if err != nil {
 		b.Fatalf("GenerateKey: %v", err)

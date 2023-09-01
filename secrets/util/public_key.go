@@ -1,9 +1,11 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"os"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // Load ssh public key from file system
@@ -37,4 +39,12 @@ func LoadCertificate(path string) (*ssh.Certificate, error) {
 		return nil, fmt.Errorf("not an ssh-certificate (%s): %s", key.Type(), path)
 	}
 	return cert, nil
+}
+
+// Check if two ssh keys are the same
+func EqualSSH(a, b ssh.PublicKey) bool {
+	if a.Type() != b.Type() {
+		return false
+	}
+	return bytes.Equal(a.Marshal(), b.Marshal()) // TODO: key comments are not stripped and may result in false negative
 }

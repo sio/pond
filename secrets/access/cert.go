@@ -122,7 +122,7 @@ func (c *Certificate) Admin() bool {
 
 // Sign user certificate
 func (c *Certificate) Sign(authority ssh.Signer, lifetime time.Duration) error {
-	if pubEqual(c.ssh.Key, authority.PublicKey()) {
+	if util.EqualSSH(c.ssh.Key, authority.PublicKey()) {
 		return errors.New("self delegation not allowed")
 	}
 	now := time.Now()

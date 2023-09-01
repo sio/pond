@@ -11,7 +11,6 @@ import (
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/sio/pond/secrets/access"
 	"github.com/sio/pond/secrets/util"
 )
 
@@ -29,7 +28,7 @@ func boxKey(signer ssh.Signer, nonce []byte) (public, private *[32]byte, err err
 	if len(nonce) < sha512.Size {
 		return nil, nil, errors.New("nonce is too short")
 	}
-	signature, err := signer.Sign(util.AntiReader, append([]byte(access.Master), nonce...))
+	signature, err := signer.Sign(util.AntiReader, append([]byte(masterTag), nonce...))
 	if err == util.ErrAntiReader {
 		return nil, nil, fmt.Errorf("signature not deterministic: %s", signer.PublicKey().Type())
 	}
@@ -37,7 +36,7 @@ func boxKey(signer ssh.Signer, nonce []byte) (public, private *[32]byte, err err
 		return nil, nil, err
 	}
 	salt := sha512.Sum512(signature.Blob)
-	kdf := hkdf.New(sha512.New, signature.Blob, salt[:], []byte(access.Master))
+	kdf := hkdf.New(sha512.New, signature.Blob, salt[:], []byte(masterTag))
 	private = new([32]byte)
 	_, err = io.ReadFull(kdf, private[:])
 	clean(signature.Blob)

@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/crypto/ssh"
+	"github.com/sio/pond/secrets/master"
 )
 
 // Create new repository in an empty directory
-func Create(path string, master *ssh.Certificate) (*Repository, error) {
+func Create(path string, master *master.Certificate) (*Repository, error) {
 	err := checkRepoEmpty(path)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func Create(path string, master *ssh.Certificate) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = file.Write(ssh.MarshalAuthorizedKey(master))
+	_, err = file.Write(master.Marshal())
 	if err != nil {
 		return nil, err
 	}

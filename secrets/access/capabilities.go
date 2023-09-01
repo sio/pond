@@ -7,7 +7,6 @@ const (
 	ManageReaders Capability = "pond/secrets: manage read access"
 	Read          Capability = "pond/secrets: read secrets"
 	Write         Capability = "pond/secrets: write secrets"
-	Master        Capability = "pond/secrets: master key"
 )
 
 var Required = map[Capability]Capability{

@@ -129,7 +129,7 @@ func (c *CertCmd) delegateAdmin(r *repo.Repository, to ssh.PublicKey, lifetime t
 	if err != nil {
 		return "", err
 	}
-	cert, err := master.Delegate(to, caps, c.Path, c.Admin, lifetime)
+	cert, err := access.DelegateAdmin(master, to, caps, c.Path, c.Admin, lifetime)
 	if err != nil {
 		return "", err
 	}

@@ -2,12 +2,8 @@ package master
 
 import (
 	"errors"
-	"time"
 
 	"golang.org/x/crypto/nacl/box"
-	"golang.org/x/crypto/ssh"
-
-	"github.com/sio/pond/secrets/access"
 )
 
 const (
@@ -39,15 +35,4 @@ func (k *Key) Decrypt(message []byte) (content []byte, err error) {
 		return nil, errors.New("message decryption failed")
 	}
 	return content, nil
-}
-
-// Delegate administrative capabilities
-func (k *Key) Delegate(
-	to ssh.PublicKey,
-	caps []access.Capability,
-	paths []string,
-	name string,
-	lifetime time.Duration,
-) (*access.Certificate, error) {
-	return access.DelegateAdmin(k.signer, to, caps, paths, name, lifetime)
 }
