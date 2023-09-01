@@ -42,10 +42,11 @@ func TestDelegateAdmin(t *testing.T) {
 	for _, path := range []string{
 		"/repo/access/admin/alice.01.cert",
 		"/repo/access/admin/alice.02.cert",
+		"/repo/access/user/bob.01.cert",
 		"/repo/access/master.cert",
 	} {
 		if !sandbox.Exists(path) {
-			t.Errorf("Expected path not found in sanbox: %s", path)
+			t.Errorf("Expected path not found in sandbox: %s", path)
 		}
 	}
 	if !strings.Contains(result.Output(), "Initialized new secrets repository: /repo") {
