@@ -9,14 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/crypto/ssh"
-
 	"github.com/sio/pond/secrets/access"
 )
 
 // Save objects to repository
 func (r *Repository) Save(x any) (path string, err error) {
-	cert, isCert := x.(*ssh.Certificate)
+	cert, isCert := x.(*access.Certificate)
 	switch {
 	case isCert:
 		return r.saveCert(cert)
@@ -25,29 +23,16 @@ func (r *Repository) Save(x any) (path string, err error) {
 	}
 }
 
-func (r *Repository) saveCert(cert *ssh.Certificate) (path string, err error) {
-	if len(cert.ValidPrincipals) == 0 {
-		return "", fmt.Errorf("empty valid principals in ssh certificate")
-	}
-	var isAdmin *bool
-	for p := range cert.Permissions.CriticalOptions {
-		capability := access.Capability(p)
-		if !capability.Valid() {
-			return "", fmt.Errorf("invalid capability: %s", capability)
-		}
-		if isAdmin == nil {
-			isAdmin = new(bool)
-			*isAdmin = capability.Admin()
-		}
-		if *isAdmin != capability.Admin() {
-			return "", fmt.Errorf("mixing user and administrator capabilities in one cert is not supported")
-		}
+func (r *Repository) saveCert(cert *access.Certificate) (path string, err error) {
+	err = cert.Validate()
+	if err != nil {
+		return "", err
 	}
 	var prefix string
-	if *isAdmin {
-		prefix = filepath.Join(r.root, accessDir, adminDir, cert.KeyId)
+	if cert.Admin() {
+		prefix = filepath.Join(r.root, accessDir, adminDir, cert.Name())
 	} else {
-		prefix = filepath.Join(r.root, accessDir, usersDir, cert.KeyId)
+		prefix = filepath.Join(r.root, accessDir, usersDir, cert.Name())
 	}
 	const base = 36 // max base supported by FormatInt; gives 1296 sortable two-character indexes
 	var suffix int64
@@ -76,7 +61,7 @@ func (r *Repository) saveCert(cert *ssh.Certificate) (path string, err error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = out.Write(ssh.MarshalAuthorizedKey(cert))
+	_, err = out.Write(cert.Marshal())
 	if err != nil {
 		return "", err
 	}

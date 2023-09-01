@@ -80,27 +80,27 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 		return fmt.Errorf("sql delete: %w", err)
 	}
 	for _, path := range paths {
-		cert, err := util.LoadCertificate(path)
+		cert, err := LoadCertificate(path)
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, path)
 		}
-		err = acl.Validate(cert, admin)
+		err = acl.Validate(cert)
 		if err != nil {
 			return fmt.Errorf("%w: %s", err, path)
 		}
-		fingerprint := ssh.FingerprintSHA256(cert.Key)
-		for _, p := range cert.ValidPrincipals {
+		fingerprint := ssh.FingerprintSHA256(cert.PublicKey())
+		for _, p := range cert.Paths() {
 			if p[len(p)-1] != '/' {
 				p += "/"
 			}
-			for c := range cert.Permissions.CriticalOptions {
+			for _, c := range cert.Capabilities() {
 				_, err = tx.Exec(
 					"INSERT INTO ACL(Fingerprint, Capability, Path, ValidAfter, ValidBefore) VALUES (?, ?, ?, ?, ?)",
 					fingerprint,
-					caps[Capability(c)],
+					caps[c],
 					p,
-					cert.ValidAfter,
-					cert.ValidBefore,
+					cert.ValidAfter(),
+					cert.ValidBefore(),
 				)
 				if err != nil {
 					return fmt.Errorf("sql insert: %w: %s: %s [%s]", err, path, p, c)
@@ -116,57 +116,20 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 }
 
 // Validate access certificate
-func (acl *ACL) Validate(cert *ssh.Certificate, admin bool) error {
-	if len(cert.KeyId) == 0 {
-		return fmt.Errorf("empty key id")
-	}
-	if len(cert.ValidPrincipals) == 0 {
-		return fmt.Errorf("no allowed paths listed in principals field")
-	}
-	for _, p := range cert.ValidPrincipals {
-		if p[0] != '/' {
-			return fmt.Errorf("relative paths not allowed in principals field: %q", p)
-		}
-	}
-	if len(cert.Permissions.CriticalOptions) == 0 {
-		return fmt.Errorf("no capabilities listed in critical options field")
-	}
-	for c := range cert.Permissions.CriticalOptions {
-		capability := Capability(c)
-		if !capability.Valid() {
-			return fmt.Errorf("invalid capability: %s", c)
-		}
-		if capability.Admin() != admin {
-			return fmt.Errorf("mixing user and administrator capabilities in one certificate")
-		}
-	}
-	if admin && !pubEqual(acl.master.Key, cert.SignatureKey) {
-		return fmt.Errorf("certificate was not signed by master key: %s", cert.KeyId)
+func (acl *ACL) Validate(cert *Certificate) error {
+	admin := cert.Admin()
+	if admin && !pubEqual(acl.master.Key, cert.SignatureKey()) {
+		return fmt.Errorf("certificate was not signed by master key: %s", cert.Name())
 	}
 	if !admin {
-		for _, p := range cert.ValidPrincipals {
-			for c := range cert.Permissions.CriticalOptions {
-				err := acl.Check(cert.SignatureKey, Required[Capability(c)], p)
+		for _, p := range cert.Paths() {
+			for _, c := range cert.Capabilities() {
+				err := acl.Check(cert.SignatureKey(), Required[c], p)
 				if err != nil {
-					return fmt.Errorf("signer not valid: %w", err)
+					return fmt.Errorf("certificate was not signed by a valid administrator: %w", err)
 				}
 			}
 		}
-	}
-	var supported = make([]string, 2)
-	if admin {
-		supported[0] = string(ManageReaders)
-		supported[1] = string(ManageWriters)
-	} else {
-		supported[0] = string(Read)
-		supported[1] = string(Write)
-	}
-	validator := &ssh.CertChecker{
-		SupportedCriticalOptions: supported,
-	}
-	err := validator.CheckCert(cert.ValidPrincipals[0], cert)
-	if err != nil {
-		return err
 	}
 	return nil
 }

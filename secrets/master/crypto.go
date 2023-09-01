@@ -48,6 +48,6 @@ func (k *Key) Delegate(
 	paths []string,
 	name string,
 	lifetime time.Duration,
-) (*ssh.Certificate, error) {
+) (*access.Certificate, error) {
 	return access.DelegateAdmin(k.signer, to, caps, paths, name, lifetime)
 }
