@@ -41,15 +41,13 @@ func TestRepoInitialization(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() {
-		t.Logf("Exit code: %d", result.ExitCode())
-		t.Logf("Output:\n%s", string(result.Output()))
-		t.FailNow()
+		t.Fatalf("\n%s", result)
 	}
-	if !strings.Contains(string(result.Output()), "Initialized new secrets repository: /repo") {
-		t.Fatalf("unexpected output after successful execution:\n%s", string(result.Output()))
+	if !strings.Contains(result.Output(), "Initialized new secrets repository: /repo") {
+		t.Fatalf("unexpected output after successful execution:\n%s", result)
 	}
 	if testing.Verbose() {
-		t.Logf("\n%s", string(result.Output()))
+		t.Logf("\n%s", result)
 	}
 }
 

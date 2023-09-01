@@ -114,19 +114,30 @@ type Result struct {
 	exit   int
 }
 
+func (r *Result) String() string {
+	if r == nil {
+		return "<nil>"
+	}
+	output := strings.TrimRight(r.Output(), "\n\r \t")
+	if r.ExitCode() == 0 {
+		return output
+	}
+	return fmt.Sprintf("%s\n[exit code %d]", output, r.ExitCode())
+}
+
 // Read standard output
-func (r *Result) Stdout() []byte {
-	return r.output.Read(stdout)
+func (r *Result) Stdout() string {
+	return string(r.output.Read(stdout))
 }
 
 // Read standard error
-func (r *Result) Stderr() []byte {
-	return r.output.Read(stderr)
+func (r *Result) Stderr() string {
+	return string(r.output.Read(stderr))
 }
 
 // Read all output (stdout and stderr)
-func (r *Result) Output() []byte {
-	return r.output.ReadAll()
+func (r *Result) Output() string {
+	return string(r.output.ReadAll())
 }
 
 // Exit code of test command sequence.

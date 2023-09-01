@@ -37,9 +37,7 @@ func TestDelegateAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() {
-		t.Logf("Exit code: %d", result.ExitCode())
-		t.Logf("Output:\n%s", string(result.Output()))
-		t.FailNow()
+		t.Fatalf("\n%s", result)
 	}
 	for _, path := range []string{
 		"/repo/access/admin/alice.01.cert",
@@ -50,11 +48,11 @@ func TestDelegateAdmin(t *testing.T) {
 			t.Errorf("Expected path not found in sanbox: %s", path)
 		}
 	}
-	if !strings.Contains(string(result.Output()), "Initialized new secrets repository: /repo") {
-		t.Fatalf("unexpected output after successful execution:\n%s", string(result.Output()))
+	if !strings.Contains(result.Output(), "Initialized new secrets repository: /repo") {
+		t.Fatalf("unexpected output after successful execution:\n%s", result)
 	}
 	if testing.Verbose() {
-		t.Logf("\n%s", string(result.Output()))
+		t.Logf("\n%s", result)
 	}
 
 	// Expected to fail
@@ -68,9 +66,9 @@ func TestDelegateAdmin(t *testing.T) {
 			t.Fatal(err)
 		}
 		if result.Ok() {
-			t.Errorf("expected command to fail, but it exited successfully:\n%s", string(result.Output()))
+			t.Errorf("expected command to fail, but it exited successfully:\n%s", result)
 		} else if testing.Verbose() {
-			t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+			t.Logf("\n%s", result)
 		}
 	}
 
@@ -84,9 +82,9 @@ func TestDelegateAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Ok() {
-		t.Fatalf("issuing certificate succeeded after admin cert revokation:\n%s", string(result.Output()))
+		t.Fatalf("issuing certificate succeeded after admin cert revokation:\n%s", result)
 	} else if testing.Verbose() {
-		t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+		t.Logf("\n%s", result)
 	}
 
 	// Issue a certificate for alice after one of previous certs was revoked
@@ -95,9 +93,9 @@ func TestDelegateAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() || testing.Verbose() {
-		t.Logf("\n%s\n[exit code %d]", string(result.Output()), result.ExitCode())
+		t.Logf("\n%s\n", result)
 	}
-	if !result.Ok() || !strings.Contains(string(result.Output()), "alice.03.cert") {
+	if !result.Ok() || !strings.Contains(result.Output(), "alice.03.cert") {
 		t.FailNow()
 	}
 }

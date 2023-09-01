@@ -19,9 +19,9 @@ func TestWithLibs(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() {
-		t.Fatalf("Exit code: %d\nOutput:\n%s", result.ExitCode(), string(result.Output()))
+		t.Fatalf("Exit code: %d\nOutput:\n%s", result.ExitCode(), result.Output())
 	}
 	if testing.Verbose() {
-		t.Logf("Output:\n%s", string(result.Output()))
+		t.Logf("Output:\n%s", result.Output())
 	}
 }
