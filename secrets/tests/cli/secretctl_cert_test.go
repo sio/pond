@@ -82,7 +82,7 @@ func TestDelegateAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if result.Ok() {
-		t.Fatalf("issuing certificate succeeded after admin cert revokation:\n%s", result)
+		t.Fatalf("issuing certificate succeeded after admin cert revocation:\n%s", result)
 	} else if testing.Verbose() {
 		t.Logf("\n%s", result)
 	}
