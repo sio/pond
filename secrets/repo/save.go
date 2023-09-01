@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -51,6 +52,7 @@ func (r *Repository) saveCert(cert *ssh.Certificate) (path string, err error) {
 	const base = 36 // max base supported by FormatInt; gives 1296 sortable two-character indexes
 	var suffix int64
 	if existing, _ := filepath.Glob(prefix + "*" + certExt); len(existing) > 0 {
+		sort.Strings(existing)
 		last := existing[len(existing)-1]
 		last = strings.TrimPrefix(last, prefix+".")
 		last = strings.TrimSuffix(last, certExt)
