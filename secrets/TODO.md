@@ -8,8 +8,6 @@
 
 ## Medium priority: quality of life
 
-- Write shell-based CLI UX tests: source test-setup.sh; set -v -x; run;
-  compare with saved output
 - Write documentation
     - Security model
     - Storage model
@@ -36,3 +34,8 @@
 ## Lowest priority: maybe sometime (if ever)
 
 - Try failure mode: ssh-agent dies on server and/or gets restarted
+- Multipath secrets: save the same value to multiple paths and enforce that
+  these paths are manupulated together from now on (modify, remove)
+- Re-sign secrets by master key with unique decryption key (derived from nonce
+  and master signature). Is there a point in doing this given that we expect
+  old version to be stored in the same git repo anyways?
