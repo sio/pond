@@ -14,10 +14,9 @@ import (
 
 // Save objects to repository
 func (r *Repository) Save(x any) (path string, err error) {
-	cert, isCert := x.(*access.Certificate)
-	switch {
-	case isCert:
-		return r.saveCert(cert)
+	switch value := x.(type) {
+	case *access.Certificate:
+		return r.saveCert(value)
 	default:
 		return "", fmt.Errorf("can not save %T to repository", x)
 	}
