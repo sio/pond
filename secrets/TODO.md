@@ -29,6 +29,7 @@
   `client_loop: send disconnect: Connection reset by peer`.
   This happens after successfully writing API response.
   May be it's related to TCP connection life cycle on server?
+- Provide tools to rekey all secrets and certificates to a new master key
 
 
 ## Lowest priority: maybe sometime (if ever)
