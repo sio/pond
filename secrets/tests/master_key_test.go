@@ -39,7 +39,7 @@ func TestNewCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenFile: %v", err)
 	}
-	_, err = file.Write(ssh.MarshalAuthorizedKey(cert))
+	_, err = file.Write(cert.Marshal())
 	if err != nil {
 		t.Fatalf("writing certificate to disk: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestMasterKey(t *testing.T) {
 		t.Fatalf(
 			"unexpected box public key:\nwant: %x\n got: %x",
 			want,
-			got,
+			got[:],
 		)
 	}
 	signer, err := LocalKey(keyPath)
