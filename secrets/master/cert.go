@@ -30,8 +30,6 @@ func LoadCertificate(path string) (*Certificate, error) {
 	return master, nil
 }
 
-var _ ssh.PublicKey = &Certificate{}
-
 func (c *Certificate) PublicKey() ssh.PublicKey {
 	return c.ssh.Key
 }
@@ -46,10 +44,6 @@ func (c *Certificate) Marshal() []byte {
 		return nil
 	}
 	return ssh.MarshalAuthorizedKey(c.ssh)
-}
-
-func (c *Certificate) Verify(data []byte, sig *ssh.Signature) error {
-	return c.ssh.Key.Verify(data, sig)
 }
 
 // NaCl box public key for sending secrets to master
