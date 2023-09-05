@@ -17,9 +17,9 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-all-subprojects
+          key: golang-${{ runner.os }}-all-subprojects-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-secrets
-            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-secrets-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-all-subprojects
             golang-${{ runner.os }}
       - run: make ci

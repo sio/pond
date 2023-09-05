@@ -26,8 +26,10 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-lib-sandbox
+          key: golang-${{ runner.os }}-lib-sandbox-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-all-subprojects-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-lib-sandbox
+            golang-${{ runner.os }}-all-subprojects
             golang-${{ runner.os }}
       - run: make ci

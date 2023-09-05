@@ -26,8 +26,10 @@ jobs:
           path: |
             ~/.cache/
             ~/go/
-          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-lib-bytepack
+          key: golang-${{ runner.os }}-lib-bytepack-${{ hashFiles('**/go.sum') }}
           restore-keys: |
-            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-all-subprojects-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-lib-bytepack
+            golang-${{ runner.os }}-all-subprojects
             golang-${{ runner.os }}
       - run: make ci
