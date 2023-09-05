@@ -71,6 +71,70 @@ func TestValue(t *testing.T) {
 	}
 }
 
+func BenchmarkSerialize(b *testing.B) {
+	v := &value.Value{
+		Path:    []string{"hello", "world"},
+		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
+		Created: time.Now(),
+		Expires: time.Now().Add(10 * time.Hour),
+	}
+	err := v.Verify()
+	if err == nil {
+		b.Fatal("verification passed for a value without any signature")
+	}
+
+	// Sign this value
+	for name, key := range keys() {
+		b.Run(name, func(b *testing.B) {
+			err = v.Sign(key)
+			if err != nil {
+				b.Fatalf("failed to sign value: %v", err)
+			}
+			err = v.Verify()
+			if err != nil {
+				b.Fatalf("signature verification: %v", err)
+			}
+
+			// Serialize
+			for i := 0; i < b.N; i++ {
+				err = v.Serialize(io.Discard)
+				if err != nil {
+					b.Fatalf("serialize: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func BenchmarkSignVerify(b *testing.B) {
+	v := &value.Value{
+		Path:    []string{"hello", "world"},
+		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
+		Created: time.Now(),
+		Expires: time.Now().Add(10 * time.Hour),
+	}
+	err := v.Verify()
+	if err == nil {
+		b.Fatal("verification passed for a value without any signature")
+	}
+
+	// Sign this value
+	for name, key := range keys() {
+		b.Run(name, func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				err = v.Sign(key)
+				if err != nil {
+					b.Fatalf("failed to sign value: %v", err)
+				}
+				err = v.Verify()
+				if err != nil {
+					b.Fatalf("signature verification: %v", err)
+				}
+			}
+		})
+	}
+}
+
 func keys() map[string]ssh.Signer {
 	var err error
 	keys := make(map[string]crypto.Signer)
