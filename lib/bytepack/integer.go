@@ -1,28 +1,36 @@
 package bytepack
 
 import (
-	"errors"
 	"unicode/utf8"
-)
-
-var (
-	ErrOverflowUTF8 = errors.New("UTF-8 codepoint overflow")
-	ErrNegativeUTF8 = errors.New("UTF-8 negative codepoint")
 )
 
 // Piggyback on UTF-8 variable width encoding
 // for storing relatively small unsigned integers
 type Uint rune
 
-func (i Uint) Bytes() ([]byte, error) {
+// Represent integer in binary format.
+// Allocates a new byte slice for the result
+func (i Uint) Bytes() []byte {
+	var b = make([]byte, utf8.UTFMax)
+	n := i.Encode(b)
+	return b[:n]
+}
+
+// Write integer bytes into the given slice.
+// Return number of bytes written
+func (i Uint) Encode(to []byte) int {
 	r := rune(i)
 	if r > utf8.MaxRune {
-		return nil, ErrOverflowUTF8
+		r = utf8.RuneError
 	}
 	if r < 0 {
-		return nil, ErrNegativeUTF8
+		r = utf8.RuneError
 	}
-	var b [utf8.MaxRune]byte
-	n := utf8.EncodeRune(b[:], r)
-	return b[:n], nil
+	return utf8.EncodeRune(to, r)
+}
+
+// Return size of binary representation (in bytes)
+func (i Uint) Size() int {
+	var x [utf8.UTFMax]byte
+	return i.Encode(x[:])
 }

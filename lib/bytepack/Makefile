@@ -9,4 +9,4 @@ fuzz:
 
 .PHONY: bench
 bench:
-	$(GO) test ./tests -bench=Benchmark -benchmem
+	$(GO) test ./tests -bench=Benchmark -benchmem -run='^#'

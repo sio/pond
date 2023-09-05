@@ -11,43 +11,33 @@ import (
 
 // Serialize a sequence of bytestrings to a single blob
 func Pack(input [][]byte) (*Bytepack, error) {
-	var err error
-	var buf bytes.Buffer
+	// Prepare output buffer
+	var ceil int
+	ceil += utf8.UTFMax
+	for i := 0; i < len(input); i++ {
+		ceil += utf8.UTFMax
+		ceil += len(input[i])
+	}
+	var buf = make([]byte, ceil)
+	var cur int
 
 	// First we declare the number of elements
-	size, err := Uint(len(input)).Bytes()
-	if err != nil {
-		return nil, fmt.Errorf("number of elements: %w", err)
-	}
-	_, err = buf.Write(size)
-	if err != nil {
-		return nil, fmt.Errorf("number of elements: %w", err)
-	}
+	cur += Uint(len(input)).Encode(buf[cur:])
 
 	// Then provide length of each element
-	for index, elem := range input {
-		size, err = Uint(len(elem)).Bytes()
-		if err != nil {
-			return nil, fmt.Errorf("element %d size: %w", index, err)
-		}
-		_, err = buf.Write(size)
-		if err != nil {
-			return nil, fmt.Errorf("element %d size: %w", index, err)
-		}
+	for _, elem := range input {
+		cur += Uint(len(elem)).Encode(buf[cur:])
 	}
 
 	// Then elements themselves
-	for index, elem := range input {
-		_, err = buf.Write(elem)
-		if err != nil {
-			return nil, fmt.Errorf("element %d: %w", index, err)
-		}
+	for _, elem := range input {
+		cur += copy(buf[cur:], elem)
 	}
 
 	// Wrap result into Bytepack struct
-	pack, err := Wrap(buf.Bytes())
+	pack, err := Wrap(buf[:cur])
 	if err != nil {
-		return nil, fmt.Errorf("serialization produced invalid result: %w", err)
+		return nil, fmt.Errorf("serialization failed: %w", err)
 	}
 	return pack, nil
 }
@@ -90,18 +80,14 @@ func decodeHead(encoded []byte) (size, offset []int, err error) {
 	}
 	r = bytes.Runes(encoded[:head])
 	if len(r) < int(r[0])+1 {
-		return nil, nil, fmt.Errorf("encoded data advertizes %d elements, but only %d sizes were parsed", int(r[0]), len(r)-1)
+		return nil, nil, fmt.Errorf("encoded data advertizes %d elements, but only %d sizes are provided", int(r[0]), len(r)-1)
 	}
 	r = r[:int(r[0])+1]
 
 	// Calculate exact length of the header
 	head = 0
 	for i := 0; i < len(r); i++ {
-		chunk, err := Uint(r[i]).Bytes()
-		if err != nil {
-			return nil, nil, fmt.Errorf("unexpected error during re-encoding element %d size: %w", i, err)
-		}
-		head += len(chunk)
+		head += Uint(r[i]).Size()
 	}
 
 	size = make([]int, int(r[0]))
@@ -113,6 +99,10 @@ func decodeHead(encoded []byte) (size, offset []int, err error) {
 		} else {
 			offset[i] = offset[i-1] + size[i-1]
 		}
+	}
+	got := offset[len(offset)-1] + size[len(size)-1]
+	if got != len(encoded) {
+		return nil, nil, fmt.Errorf("calculated blob size (%dB) does not match encoded size (%dB)", got, len(encoded))
 	}
 	return size, offset, nil
 }
