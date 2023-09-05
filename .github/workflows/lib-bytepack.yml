@@ -1,0 +1,33 @@
+name: lib/bytepack
+
+on:
+  push:
+    paths:
+      - 'lib/bytepack/**'
+      - '.github/workflows/lib-bytepack*'
+  pull_request:
+    paths:
+      - 'lib/bytepack/**'
+      - '.github/workflows/lib-bytepack*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lib/bytepack
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/
+            ~/go/
+          key: golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}-lib-bytepack
+          restore-keys: |
+            golang-${{ runner.os }}-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}
+      - run: make ci
