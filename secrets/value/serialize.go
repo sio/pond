@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/sio/pond/lib/bytepack"
 )
 
 const (
-	fieldColumnWidth = 9 // base on longest key width
+	fieldColumnWidth = 7 // base on longest key width
 	blobDelimiter    = "---"
-	blobLineWidth    = 86
+	blobLineWidth    = 72
 )
 
 func (v *Value) Serialize(out io.Writer) error {
@@ -31,16 +33,21 @@ func (v *Value) Serialize(out io.Writer) error {
 	}
 	record(buf, "Created", v.Created.UTC().Format(time.RFC3339))
 	record(buf, "Expires", v.Expires.UTC().Format(time.RFC3339))
-	record(buf, "Signer", string(ssh.MarshalAuthorizedKey(v.Signer)))
+	record(buf, "Signer", fmt.Sprintf("%s (%s)", ssh.FingerprintSHA256(v.Signer), v.Signer.Type()))
+	record(buf, blobDelimiter, "")
 	_, err = io.Copy(out, buf)
 	if err != nil {
 		return err
 	}
-	err = writeBlob64(out, v.Signature)
+	pack, err := bytepack.Pack([][]byte{
+		ssh.MarshalAuthorizedKey(v.Signer),
+		v.Signature,
+		v.Blob,
+	})
 	if err != nil {
 		return err
 	}
-	err = writeBlob64(out, v.Blob)
+	err = writeBlob64(out, pack.Blob())
 	if err != nil {
 		return err
 	}
@@ -60,16 +67,12 @@ func writeBlob64(out io.Writer, data []byte) error {
 	var encoded = make([]byte, base64.StdEncoding.EncodedLen(len(data)))
 	base64.StdEncoding.Encode(encoded, data)
 	var end int
-	_, err := fmt.Fprintln(out, blobDelimiter)
-	if err != nil {
-		return err
-	}
 	for i := 0; i < len(encoded); i = end {
 		end = i + blobLineWidth
 		if end > len(encoded) {
 			end = len(encoded)
 		}
-		_, err = fmt.Fprintln(out, string(encoded[i:end]))
+		_, err := fmt.Fprintln(out, string(encoded[i:end]))
 		if err != nil {
 			return err
 		}
@@ -86,13 +89,12 @@ func (v *Value) Deserialize(r io.Reader) error {
 		return fmt.Errorf("unexpected file header: %s", scanner.Text())
 	}
 	var (
+		blobBuffer  = new(bytes.Buffer)
 		err         error
+		fpSigner    string
 		lineNo      uint
 		next        Value
 		readingBlob bool
-		blobBuffer  = new(bytes.Buffer)
-		readingSig  bool
-		sigBuffer   = new(bytes.Buffer)
 	)
 	for scanner.Scan() {
 		line := strings.TrimLeft(scanner.Text(), " \t")
@@ -105,12 +107,7 @@ func (v *Value) Deserialize(r io.Reader) error {
 		case line == "" || strings.HasPrefix(line, "#"):
 			// skip empty lines and comments
 		case line == blobDelimiter:
-			readingSig = !readingSig
-			if !readingSig {
-				readingBlob = !readingBlob
-			}
-		case readingSig:
-			sigBuffer.WriteString(line)
+			readingBlob = !readingBlob
 		case readingBlob:
 			blobBuffer.WriteString(line)
 		case !ok:
@@ -128,10 +125,7 @@ func (v *Value) Deserialize(r io.Reader) error {
 				return fmt.Errorf("line #%d: invalid timestamp: %v", lineNo, err)
 			}
 		case field == "Signer":
-			next.Signer, _, _, _, err = ssh.ParseAuthorizedKey([]byte(value))
-			if err != nil {
-				return fmt.Errorf("line #%d: invalid signer: %v", lineNo, err)
-			}
+			fpSigner, _, _ = strings.Cut(value, " ")
 		default:
 			return fmt.Errorf("line #%d: invalid field: %s", lineNo, field)
 		}
@@ -139,14 +133,26 @@ func (v *Value) Deserialize(r io.Reader) error {
 	if scanner.Err() != nil {
 		return scanner.Err()
 	}
-	next.Signature, err = base64.StdEncoding.DecodeString(sigBuffer.String())
-	if err != nil {
-		return fmt.Errorf("decoding base64 signature: %w", err)
-	}
-	next.Blob, err = base64.StdEncoding.DecodeString(blobBuffer.String())
+	blob, err := base64.StdEncoding.DecodeString(blobBuffer.String())
 	if err != nil {
 		return fmt.Errorf("decoding base64 blob: %w", err)
 	}
+	pack, err := bytepack.Wrap(blob)
+	if err != nil {
+		return fmt.Errorf("unpacking blob: %w", err)
+	}
+	if pack.Size() != 3 {
+		return fmt.Errorf("unexpected number of blob elements: %d (instead of 3)", pack.Size())
+	}
+	next.Signer, _, _, _, err = ssh.ParseAuthorizedKey(pack.Element(0))
+	if err != nil {
+		return fmt.Errorf("invalid signer public key: %v", err)
+	}
+	if fpSigner != ssh.FingerprintSHA256(next.Signer) {
+		return fmt.Errorf("signer fingerprint (%s) does not match the one used in signature (%s)", fpSigner, ssh.FingerprintSHA256(next.Signer))
+	}
+	next.Signature = pack.Element(1)
+	next.Blob = pack.Element(2)
 	*v = next
 	err = v.Verify()
 	if err != nil {
