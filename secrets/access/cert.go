@@ -146,6 +146,9 @@ func (c *Certificate) Marshal() []byte {
 
 // Validate user certificate
 func (c *Certificate) Validate() error {
+	if util.EqualSSH(c.ssh.Key, c.ssh.SignatureKey) {
+		return errors.New("self delegation not allowed")
+	}
 	if len(c.ssh.KeyId) == 0 {
 		return fmt.Errorf("empty key id")
 	}
