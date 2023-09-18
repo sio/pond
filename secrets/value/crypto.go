@@ -32,7 +32,7 @@ func (v *Value) Encrypt(master *master.Certificate, plaintext []byte) (err error
 	if err != nil {
 		return err
 	}
-	padding = padding[1 : 1+int(padding[0])%paddingMaxBytes]
+	padding = padding[:1+int(padding[0])%paddingMaxBytes]
 
 	cipher := box.Seal(nil, append(padding, plaintext...), nonce, master.SendTo(), senderPrivate)
 	pack, err := bytepack.Pack([][]byte{
@@ -63,5 +63,9 @@ func (v *Value) Decrypt(master *master.Key) (plaintext []byte, err error) {
 	copy(nonce[:], blob.Element(1))
 
 	var cipher = blob.Element(2)
-	return master.Unbox(cipher, sender, nonce)
+	plaintext, err = master.Unbox(cipher, sender, nonce)
+	if err != nil {
+		return nil, err
+	}
+	return plaintext[1+int(plaintext[0])%paddingMaxBytes:], nil
 }
