@@ -1,0 +1,67 @@
+package value
+
+import (
+	"github.com/sio/pond/lib/bytepack"
+	"github.com/sio/pond/secrets/master"
+
+	"crypto/rand"
+	"fmt"
+	"golang.org/x/crypto/nacl/box"
+	"io"
+)
+
+const (
+	paddingMaxBytes = 64
+	nonceBytes      = 24
+)
+
+func (v *Value) Encrypt(master *master.Certificate, plaintext []byte) (err error) {
+	var nonce = new([24]byte)
+	_, err = io.ReadFull(rand.Reader, nonce[:])
+	if err != nil {
+		return err
+	}
+
+	senderPublic, senderPrivate, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		return err
+	}
+
+	var padding = make([]byte, 1+paddingMaxBytes, 1+paddingMaxBytes+len(plaintext)+box.Overhead)
+	_, err = io.ReadFull(rand.Reader, padding)
+	if err != nil {
+		return err
+	}
+	padding = padding[1 : 1+int(padding[0])%paddingMaxBytes]
+
+	cipher := box.Seal(nil, append(padding, plaintext...), nonce, master.SendTo(), senderPrivate)
+	pack, err := bytepack.Pack([][]byte{
+		senderPublic[:],
+		nonce[:],
+		cipher,
+	})
+	if err != nil {
+		return err
+	}
+	v.Blob = pack.Blob()
+	return nil
+}
+
+func (v *Value) Decrypt(master *master.Key) (plaintext []byte, err error) {
+	blob, err := bytepack.Wrap(v.Blob)
+	if err != nil {
+		return nil, err
+	}
+	if blob.Size() != 3 {
+		return nil, fmt.Errorf("unexpected number of elements unpacked from blob: %d instead of 3", blob.Size())
+	}
+
+	var sender = new([32]byte)
+	copy(sender[:], blob.Element(0))
+
+	var nonce = new([24]byte)
+	copy(nonce[:], blob.Element(1))
+
+	var cipher = blob.Element(2)
+	return master.Unbox(cipher, sender, nonce)
+}

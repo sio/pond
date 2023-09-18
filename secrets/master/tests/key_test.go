@@ -88,11 +88,9 @@ func TestMasterKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rand: %v", err)
 	}
-	message := append([]byte{}, senderPubKey[:]...)
-	message = append(message, nonce[:]...)
-	message = box.Seal(message, []byte(content), nonce, receiverPubKey, senderPrivKey)
+	message := box.Seal(nil, []byte(content), nonce, receiverPubKey, senderPrivKey)
 
-	received, err := key.Decrypt(message)
+	received, err := key.Unbox(message, senderPubKey, nonce)
 	if err != nil {
 		t.Fatalf("decrypt: %v", err)
 	}
@@ -130,10 +128,8 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 	var (
 		msgSize = 30
 		buf     = make([]byte, 4096)
-		pkg     = make([]byte, msgSize+box.Overhead+len(senderPubKey)+len(nonce))
+		pkg     = make([]byte, msgSize+box.Overhead)
 	)
-	copy(pkg, senderPubKey[:])
-	copy(pkg[len(senderPubKey):], nonce[:])
 	_, err = io.ReadFull(rand.Reader, buf)
 	if err != nil {
 		b.Fatalf("rand: %v", err)
@@ -141,13 +137,14 @@ func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		start := i % (len(buf) - msgSize)
 		send := buf[start : start+msgSize]
-		pkg = box.Seal(pkg[:len(senderPubKey)+len(nonce)], send, nonce, receiverPubKey, senderPrivKey)
-		msg, err := key.Decrypt(pkg)
+		pkg = box.Seal(pkg[:0], send, nonce, receiverPubKey, senderPrivKey)
+		msg, err := key.Unbox(pkg, senderPubKey, nonce)
 		if err != nil {
-			b.Fatalf("decrypt: %v", err)
+			b.Logf("%x\n", pkg)
+			b.Fatalf("iteration %d: decrypt: %v", i, err)
 		}
 		if !bytes.Equal(msg, send) {
-			b.Fatalf("mangled message:\nwant %x\n got: %x", send, msg)
+			b.Fatalf("iteration %d: mangled message:\nwant %x\n got: %x", i, send, msg)
 		}
 	}
 }
@@ -172,7 +169,7 @@ func BenchmarkMasterKeyEncrypt(b *testing.B) {
 	var (
 		msgSize = 30
 		buf     = make([]byte, 4096)
-		pkg     = make([]byte, msgSize+box.Overhead+len(senderPubKey)+len(nonce))
+		pkg     = make([]byte, msgSize+box.Overhead)
 	)
 	copy(pkg, senderPubKey[:])
 	copy(pkg[len(senderPubKey):], nonce[:])
@@ -183,7 +180,7 @@ func BenchmarkMasterKeyEncrypt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		start := i % (len(buf) - msgSize)
 		send := buf[start : start+msgSize]
-		pkg = box.Seal(pkg[:len(senderPubKey)+len(nonce)], send, nonce, receiverPubKey, senderPrivKey)
+		pkg = box.Seal(pkg[:], send, nonce, receiverPubKey, senderPrivKey)
 	}
 }
 
