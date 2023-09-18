@@ -52,6 +52,10 @@ go.sum:
 	$(GO) mod tidy
 	touch $@
 
+.PHONY: ci
+ci:  ## run continuous integration checks
+ci: lint test bench-quick
+
 .PHONY: test test-verbose
 test:  ## run automated tests
 test-verbose:  ## run tests with increased verbosity
@@ -61,12 +65,16 @@ test test-verbose: go.sum
 
 .PHONY: bench
 bench:  ## run benchmarks
-	$(GO) test \
+	$(GO) test $(EVERYTHING) \
 		-bench=$(GOBENCH_TARGET) \
 		-benchmem \
 		-benchtime=$(GOBENCH_TIME) \
 		-count=$(GOBENCH_COUNT) \
 		-run='^#'
+
+.PHONY: bench-quick
+bench-quick:  ## run a single iteration of each benchmark
+	$(GO) test $(EVERYTHING) -bench=. -benchmem -benchtime=1x -run='^#'
 
 STATICCHECK=$(GOPATH)/bin/staticcheck$(GOEXE)
 $(STATICCHECK):
