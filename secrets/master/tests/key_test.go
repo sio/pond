@@ -15,11 +15,12 @@ import (
 	"os"
 )
 
+const (
+	keyPath  = "../../tests/keys/master"
+	certPath = keyPath + ".cert"
+)
+
 func TestNewCertificate(t *testing.T) {
-	const (
-		keyPath  = "keys/master"
-		certPath = keyPath + ".cert"
-	)
 	signer, err := LocalKey(keyPath)
 	if err != nil {
 		t.Fatalf("LocalKey: %v", err)
@@ -47,9 +48,6 @@ func TestNewCertificate(t *testing.T) {
 
 func TestMasterKey(t *testing.T) {
 	const (
-		keyPath  = "keys/master"
-		certPath = keyPath + ".cert"
-
 		// ssh-keygen -Lf certPath | grep ID
 		expectedBoxKey = "JgyCPNQAml3Lcm21zXfZPYIHiFw4I/1bjhxfbX5CyV0="
 	)
@@ -106,10 +104,6 @@ func TestMasterKey(t *testing.T) {
 // Measure encryption+decryption cycle.
 // See BenchmarkMasterKeyEncrypt for a baseline.
 func BenchmarkMasterKeyEncryptDecrypt(b *testing.B) {
-	const (
-		keyPath  = "keys/master"
-		certPath = keyPath + ".cert"
-	)
 	cert, err := master.LoadCertificate(certPath)
 	if err != nil {
 		b.Fatalf("LoadCertificate: %v", err)
