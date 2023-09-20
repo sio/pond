@@ -43,12 +43,12 @@ func (v *Value) Encrypt(master *master.Certificate, plaintext []byte) (err error
 	if err != nil {
 		return err
 	}
-	v.Blob = pack.Blob()
+	v.blob = pack.Blob()
 	return nil
 }
 
 func (v *Value) Decrypt(master *master.Key) (plaintext []byte, err error) {
-	blob, err := bytepack.Wrap(v.Blob)
+	blob, err := bytepack.Wrap(v.blob)
 	if err != nil {
 		return nil, err
 	}

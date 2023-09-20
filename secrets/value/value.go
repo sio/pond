@@ -15,11 +15,11 @@ import (
 // Encrypted secret value
 type Value struct {
 	Path      []string
-	Blob      []byte
 	Created   time.Time
 	Expires   time.Time
 	Signer    ssh.PublicKey
-	Signature []byte
+	blob      []byte
+	signature []byte
 }
 
 const (
@@ -49,7 +49,7 @@ func (v *Value) bytesToSign(nonce []byte) []byte {
 	for _, p := range v.Path {
 		_, _ = fmt.Fprintln(buf, p)
 	}
-	_, _ = buf.Write(v.Blob)
+	_, _ = buf.Write(v.blob)
 	return buf.Bytes()
 }
 
@@ -71,25 +71,25 @@ func (v *Value) Sign(s ssh.Signer) error {
 	}
 
 	v.Signer = pubkey
-	v.Signature = make([]byte, sigNonceBytes+len(sig.Blob))
-	copy(v.Signature[:sigNonceBytes], data)
-	copy(v.Signature[sigNonceBytes:], sig.Blob)
+	v.signature = make([]byte, sigNonceBytes+len(sig.Blob))
+	copy(v.signature[:sigNonceBytes], data)
+	copy(v.signature[sigNonceBytes:], sig.Blob)
 	return nil
 }
 
 // Verify value signature
 func (v *Value) Verify() error {
-	if v.Signer == nil || len(v.Signature) == 0 {
+	if v.Signer == nil || len(v.signature) == 0 {
 		return errors.New("value not signed yet")
 	}
-	data := v.bytesToSign(v.Signature[:sigNonceBytes])
+	data := v.bytesToSign(v.signature[:sigNonceBytes])
 	format, ok := sigFormat[v.Signer.Type()]
 	if !ok {
 		format = v.Signer.Type()
 	}
 	sig := &ssh.Signature{
 		Format: format,
-		Blob:   v.Signature[sigNonceBytes:],
+		Blob:   v.signature[sigNonceBytes:],
 	}
 	return v.Signer.Verify(data, sig)
 }

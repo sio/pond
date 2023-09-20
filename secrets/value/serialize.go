@@ -41,8 +41,8 @@ func (v *Value) Serialize(out io.Writer) error {
 	}
 	pack, err := bytepack.Pack([][]byte{
 		ssh.MarshalAuthorizedKey(v.Signer),
-		v.Signature,
-		v.Blob,
+		v.signature,
+		v.blob,
 	})
 	if err != nil {
 		return err
@@ -151,8 +151,8 @@ func (v *Value) Deserialize(r io.Reader) error {
 	if fpSigner != ssh.FingerprintSHA256(next.Signer) {
 		return fmt.Errorf("signer fingerprint (%s) does not match the one used in signature (%s)", fpSigner, ssh.FingerprintSHA256(next.Signer))
 	}
-	next.Signature = pack.Element(1)
-	next.Blob = pack.Element(2)
+	next.signature = pack.Element(1)
+	next.blob = pack.Element(2)
 	*v = next
 	err = v.Verify()
 	if err != nil {

@@ -26,9 +26,6 @@ func TestEncryptDecrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if testing.Verbose() {
-		t.Logf("Encrypted: %x", v.Blob)
-	}
 	signer, err := LocalKey(keyPath)
 	if err != nil {
 		t.Fatalf("LocalKey: %v", err)

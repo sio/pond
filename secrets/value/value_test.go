@@ -1,7 +1,6 @@
-package tests
+package value
 
 import (
-	"github.com/sio/pond/secrets/value"
 	"testing"
 
 	"bytes"
@@ -19,9 +18,9 @@ import (
 )
 
 func TestValue(t *testing.T) {
-	v := &value.Value{
+	v := &Value{
 		Path:    []string{"TestValue", "hello", "world"},
-		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
+		blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}
@@ -52,7 +51,7 @@ func TestValue(t *testing.T) {
 			if testing.Verbose() {
 				t.Logf("\n%s", serialized)
 			}
-			var v2 = new(value.Value)
+			var v2 = new(Value)
 			err = v2.Deserialize(bytes.NewBufferString(serialized))
 			if err != nil {
 				t.Log(v)
@@ -74,9 +73,9 @@ func TestValue(t *testing.T) {
 }
 
 func BenchmarkSerialize(b *testing.B) {
-	v := &value.Value{
+	v := &Value{
 		Path:    []string{"BenchmarkSerialize", "hello", "world"},
-		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
+		blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}
@@ -109,9 +108,9 @@ func BenchmarkSerialize(b *testing.B) {
 }
 
 func BenchmarkSignVerify(b *testing.B) {
-	v := &value.Value{
+	v := &Value{
 		Path:    []string{"BenchmarkSignVerify", "hello", "world"},
-		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
+		blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}
