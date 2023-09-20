@@ -19,7 +19,7 @@ type CertCmd struct {
 	Key     string   `type:"path" short:"k" required:"" placeholder:"path" help:"Public key of recipient"`
 	Read    bool     `short:"r" help:"Read access flag"`
 	Write   bool     `short:"w" help:"Write access flag"`
-	Expires string   `short:"x" default:"90d" help:"Certificate validity duration"`
+	Expires string   `short:"x" default:"90d" help:"Certificate validity duration (default: ${default})"`
 	Path    []string `arg:"" name:"prefix" required:"" help:"List of path prefixes to delegate privileges over"`
 }
 

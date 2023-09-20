@@ -65,6 +65,6 @@ Flags:
   -k, --key=path         Public key of recipient
   -r, --read             Read access flag
   -w, --write            Write access flag
-  -x, --expires="90d"    Certificate validity duration
+  -x, --expires="90d"    Certificate validity duration (default: 90d)
 ```
 <!--SECTION bin/secretctl@linux-amd64 cert --help END OFFSET 1-->
