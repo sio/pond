@@ -99,3 +99,60 @@ func BenchmarkEncryptDecrypt(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkEncryptSerializeDecrypt(b *testing.B) {
+	v := &value.Value{
+		Path:    []string{"hello", "world"},
+		Created: time.Now(),
+		Expires: time.Now().Add(10 * time.Hour),
+	}
+	cert, err := master.LoadCertificate(certPath)
+	if err != nil {
+		b.Fatalf("LoadCertificate: %v", err)
+	}
+	signer, err := LocalKey(keyPath)
+	if err != nil {
+		b.Fatalf("LocalKey: %v", err)
+	}
+	key, err := master.NewKey(signer, cert)
+	if err != nil {
+		b.Fatalf("NewKey: %v", err)
+	}
+	signer, err = LocalKey("../../tests/keys/alice")
+	if err != nil {
+		b.Fatalf("LocalKey: %v", err)
+	}
+	var buf = new(bytes.Buffer)
+	var v2 = new(value.Value)
+	var secret = make([]byte, 512)
+	for i := 0; i < b.N; i++ {
+		_, err = io.ReadFull(rand.Reader, secret)
+		if err != nil {
+			b.Fatalf("rand: %v", err)
+		}
+		err = v.Encrypt(cert, []byte(secret))
+		if err != nil {
+			b.Fatalf("Encrypt: %v", err)
+		}
+		err = v.Sign(signer)
+		if err != nil {
+			b.Fatalf("Sign: %v", err)
+		}
+		buf.Reset()
+		err = v.Serialize(buf)
+		if err != nil {
+			b.Fatalf("Serialize: %v", err)
+		}
+		err = v2.Deserialize(buf)
+		if err != nil {
+			b.Fatalf("Deserialize: %v", err)
+		}
+		decrypted, err := v2.Decrypt(key)
+		if err != nil {
+			b.Fatalf("Decrypt: %v", err)
+		}
+		if !bytes.Equal(decrypted, secret) {
+			b.Fatalf("data mangled during encryption/decryption:\nwas %x (%db)\nnow %x (%db)", secret, len(secret), decrypted, len(decrypted))
+		}
+	}
+}
