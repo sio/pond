@@ -11,11 +11,20 @@ import (
 )
 
 const (
+	// Maximum secret size is set to the upper bound on single message size
+	// recommended by NaCl: https://pkg.go.dev/golang.org/x/crypto@v0.13.0/nacl/box#pkg-overview
+	//
+	// Support for larger secrets may be added in future if need arises
+	MaxValueBytes = 16 * 1024
+
 	paddingMaxBytes = 64
 	nonceBytes      = 24
 )
 
 func (v *Value) Encrypt(master *master.Certificate, plaintext []byte) (err error) {
+	if len(plaintext) > MaxValueBytes {
+		return fmt.Errorf("secret values larger than %d bytes are not supported", MaxValueBytes)
+	}
 	var nonce = new([24]byte)
 	_, err = io.ReadFull(rand.Reader, nonce[:])
 	if err != nil {
