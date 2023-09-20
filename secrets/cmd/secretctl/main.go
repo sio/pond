@@ -14,6 +14,7 @@ var cli struct {
 	Chdir string  `short:"C" env:"SECRETS_DIR" placeholder:"path" type:"path" help:"Change working directory prior to executing"`
 	Init  InitCmd `cmd:"init" help:"Initialize secrets repository in an empty directory"`
 	Cert  CertCmd `cmd:"cert" help:"Issue certificate to delegate user/administrator privileges"`
+	Set   SetCmd  `cmd:"set" help:"Set secret value from argument/file/stdin/$EDITOR"`
 }
 
 func main() {

@@ -18,6 +18,9 @@ Commands:
   cert --user=name --key=path <prefix> ...
     Issue certificate to delegate user/administrator privileges
 
+  set <secret> [<value>]
+    Set secret value from argument/file/stdin/$EDITOR
+
 Run "secretctl@linux-amd64 <command> --help" for more information on a command.
 ```
 <!--SECTION bin/secretctl@linux-amd64 --help END OFFSET 1-->
