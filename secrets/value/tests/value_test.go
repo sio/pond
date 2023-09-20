@@ -20,7 +20,7 @@ import (
 
 func TestValue(t *testing.T) {
 	v := &value.Value{
-		Path:    []string{"hello", "world"},
+		Path:    []string{"TestValue", "hello", "world"},
 		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
@@ -49,7 +49,9 @@ func TestValue(t *testing.T) {
 				t.Fatalf("serialize: %v", err)
 			}
 			serialized := buf.String()
-			t.Logf("\n%s", serialized)
+			if testing.Verbose() {
+				t.Logf("\n%s", serialized)
+			}
 			var v2 = new(value.Value)
 			err = v2.Deserialize(bytes.NewBufferString(serialized))
 			if err != nil {
@@ -73,7 +75,7 @@ func TestValue(t *testing.T) {
 
 func BenchmarkSerialize(b *testing.B) {
 	v := &value.Value{
-		Path:    []string{"hello", "world"},
+		Path:    []string{"BenchmarkSerialize", "hello", "world"},
 		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
@@ -108,7 +110,7 @@ func BenchmarkSerialize(b *testing.B) {
 
 func BenchmarkSignVerify(b *testing.B) {
 	v := &value.Value{
-		Path:    []string{"hello", "world"},
+		Path:    []string{"BenchmarkSignVerify", "hello", "world"},
 		Blob:    []byte(strings.Repeat("some gibberish here", 100)),
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),

@@ -13,7 +13,7 @@ import (
 
 func TestEncryptDecrypt(t *testing.T) {
 	v := &value.Value{
-		Path:    []string{"hello", "world"},
+		Path:    []string{"encrypted/value"},
 		Created: time.Now(),
 		Expires: time.Now().Add(10 * time.Hour),
 	}
@@ -43,6 +43,22 @@ func TestEncryptDecrypt(t *testing.T) {
 	}
 	if string(decrypted) != secret {
 		t.Fatalf("data mangled during encryption/decryption: was %q (%db), now %q (%db)", secret, len(secret), string(decrypted), len(decrypted))
+	}
+	signer, err = LocalKey("../../tests/keys/alice")
+	if err != nil {
+		t.Fatalf("LocalKey: %v", err)
+	}
+	err = v.Sign(signer)
+	if err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	buf := new(bytes.Buffer)
+	err = v.Serialize(buf)
+	if err != nil {
+		t.Fatalf("Serialize: %v", err)
+	}
+	if testing.Verbose() {
+		t.Logf(buf.String())
 	}
 }
 
