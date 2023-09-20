@@ -15,6 +15,9 @@ type SetCmd struct {
 }
 
 func (c *SetCmd) Run() error {
+	if c.Value != "" && c.File != "" {
+		return fmt.Errorf("only one of <value> and <--file> is expected to be provided")
+	}
 	var value string
 	switch {
 	case c.Value != "":
