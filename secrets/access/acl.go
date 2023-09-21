@@ -1,11 +1,15 @@
 package access
 
 import (
+	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/sio/pond/secrets/agent"
@@ -19,10 +23,20 @@ func Open(path string) (*ACL, error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := sql.Open("sqlite3", ":memory:")
+	unique := make([]byte, 64)
+	_, err = io.ReadFull(rand.Reader, unique)
+	if err != nil {
+		return nil, fmt.Errorf("rand: %w", err)
+	}
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%x?mode=memory&cache=shared", unique))
 	if err != nil {
 		return nil, err
 	}
+
+	// Avoid closing all connections (will delete in-memory database)
+	db.SetMaxIdleConns(2)
+	db.SetConnMaxLifetime(-1)
+
 	_, err = db.Exec(schema)
 	if err != nil {
 		return nil, fmt.Errorf("sql schema: %w", err)
@@ -55,7 +69,18 @@ func (acl *ACL) LoadAdmin(paths []string) error {
 	return acl.loadCerts(paths, true)
 }
 
-func (acl *ACL) loadCerts(paths []string, admin bool) error {
+func (acl *ACL) loadCerts(paths []string, admin bool) (err error) {
+	certs := make([]*Certificate, len(paths))
+	for index, path := range paths {
+		certs[index], err = LoadCertificate(path)
+		if err != nil {
+			return fmt.Errorf("loading %s: %w", path, err)
+		}
+		err = acl.Validate(certs[index])
+		if err != nil {
+			return fmt.Errorf("validating %s: %w", path, err)
+		}
+	}
 	tx, err := acl.db.Begin()
 	if err != nil {
 		return err
@@ -77,15 +102,8 @@ func (acl *ACL) loadCerts(paths []string, admin bool) error {
 	if err != nil {
 		return fmt.Errorf("sql delete: %w", err)
 	}
-	for _, path := range paths {
-		cert, err := LoadCertificate(path)
-		if err != nil {
-			return fmt.Errorf("%w: %s", err, path)
-		}
-		err = acl.Validate(cert)
-		if err != nil {
-			return fmt.Errorf("%w: %s", err, path)
-		}
+	for index, path := range paths {
+		cert := certs[index]
 		fingerprint := ssh.FingerprintSHA256(cert.PublicKey())
 		for _, p := range cert.Paths() {
 			if p[len(p)-1] != '/' {
@@ -124,7 +142,13 @@ func (acl *ACL) Validate(cert *Certificate) error {
 			for _, c := range cert.Capabilities() {
 				err := acl.Check(cert.SignatureKey(), Required[c], p)
 				if err != nil {
-					return fmt.Errorf("certificate was not signed by a valid administrator: %w", err)
+					return fmt.Errorf(
+						"failed to verify administrator privileges of signer %s over path %q {%s}: %w",
+						ssh.FingerprintSHA256(cert.SignatureKey()),
+						p,
+						Required[c].Short(),
+						err,
+					)
 				}
 			}
 		}
@@ -146,12 +170,75 @@ func (acl *ACL) Check(key ssh.PublicKey, c Capability, dir string) error {
 	var count int
 	err := acl.db.QueryRow(query, fingerprint, caps[c], dir).Scan(&count)
 	if err != nil {
+		acl.Dump()
 		return err
 	}
 	if count == 0 {
 		return ErrPermissionDenied
 	}
 	return nil
+}
+
+// Dump ACL database for debugging
+func (acl *ACL) Dump() {
+	backupPath := os.Getenv("DEBUG_ACL_DUMP")
+	if backupPath == "" {
+		return
+	}
+	stderr := func(f string, a ...any) {
+		_, _ = fmt.Fprintf(os.Stderr, f+"\n", a...)
+	}
+	backup, err := sql.Open("sqlite3", backupPath)
+	if err != nil {
+		stderr("sqlite3: failed to open $DEBUG_ACL_DUMP: %v", err)
+		return
+	}
+	defer func() { _ = backup.Close() }()
+
+	// https://rbn.im/backing-up-a-SQLite-database-with-Go/backing-up-a-SQLite-database-with-Go.html
+	srcConn, err := acl.db.Conn(context.Background())
+	if err != nil {
+		stderr("error: obtaining src connection: %v", err)
+		return
+	}
+	destConn, err := backup.Conn(context.Background())
+	if err != nil {
+		stderr("error: obtaining src connection: %v", err)
+		return
+	}
+	err = destConn.Raw(func(destConn interface{}) error {
+		return srcConn.Raw(func(srcConn interface{}) error {
+			src, ok := srcConn.(*sqlite3.SQLiteConn)
+			if !ok {
+				return fmt.Errorf("error: failed to convert src to SQLiteConn")
+			}
+			dest, ok := destConn.(*sqlite3.SQLiteConn)
+			if !ok {
+				return fmt.Errorf("error: failed to convert dest to SQLiteConn")
+			}
+			b, err := dest.Backup("main", src, "main")
+			if err != nil {
+				return fmt.Errorf("error: backup initialization failed: %v", err)
+			}
+			done, err := b.Step(-1)
+			if err != nil {
+				return fmt.Errorf("error: backup stepping: %v", err)
+			}
+			if !done {
+				return fmt.Errorf("error: backup not done")
+			}
+			err = b.Finish()
+			if err != nil {
+				return fmt.Errorf("error: finishing backup: %v", err)
+			}
+			return b.Close()
+		})
+	})
+	if err != nil {
+		stderr("%v", err)
+		return
+	}
+	stderr("ACL database dumped successfully: %s", backupPath)
 }
 
 var ErrPermissionDenied = errors.New("permission denied")

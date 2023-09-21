@@ -1,4 +1,4 @@
-CREATE TABLE ACL(
+CREATE TABLE IF NOT EXISTS ACL(
     Fingerprint TEXT    NOT NULL,
     Capability  INT8    NOT NULL,
     Path        TEXT    NOT NULL,
@@ -6,7 +6,7 @@ CREATE TABLE ACL(
     ValidBefore INTEGER NOT NULL
 );
 
-CREATE VIEW ValidACL AS
+CREATE VIEW IF NOT EXISTS ValidACL AS
 SELECT Fingerprint, Capability, Path
 FROM ACL
 WHERE ValidAfter <= unixepoch() AND unixepoch() < ValidBefore
