@@ -8,6 +8,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/sio/pond/secrets/agent"
 	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/util"
 )
@@ -154,3 +155,36 @@ func (acl *ACL) Check(key ssh.PublicKey, c Capability, dir string) error {
 }
 
 var ErrPermissionDenied = errors.New("permission denied")
+
+// Connect to ssh-agent and find an identity that has sufficient permissions
+func (acl *ACL) FindAgent(caps []Capability, paths []string) (*agent.Conn, error) {
+	signer, err := agent.New(nil)
+	if err != nil {
+		return nil, err
+	}
+	fail := func(err error) (*agent.Conn, error) {
+		_ = signer.Close()
+		return nil, err
+	}
+	identities := signer.ListKeys()
+	if len(identities) == 0 {
+		return fail(fmt.Errorf("no identities available in ssh-agent"))
+	}
+loop_id:
+	for _, id := range identities {
+		for _, capability := range caps {
+			for _, path := range paths {
+				err = acl.Check(id, Required[capability], path)
+				if err != nil {
+					continue loop_id
+				}
+			}
+		}
+		err = signer.SetIdentity(id)
+		if err != nil {
+			return fail(err)
+		}
+		return signer, nil
+	}
+	return fail(fmt.Errorf("ssh-agent: no matching identity out of %d tried", len(identities)))
+}

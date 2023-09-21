@@ -7,7 +7,6 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/sio/pond/secrets/access"
-	"github.com/sio/pond/secrets/agent"
 	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/repo"
 	"github.com/sio/pond/secrets/util"
@@ -82,36 +81,16 @@ func (c *CertCmd) delegateUser(r *repo.Repository, to ssh.PublicKey, lifetime ti
 	if err != nil {
 		return "", err
 	}
-	signer, err := agent.New(nil)
+	signer, err := acl.FindAgent(caps, c.Path)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = signer.Close() }()
-	identities := signer.ListKeys()
-	if len(identities) == 0 {
-		return "", fmt.Errorf("no identities available in ssh-agent")
+	cert, err := access.DelegateUser(signer, to, caps, c.Path, c.User, lifetime)
+	if err != nil {
+		return "", err
 	}
-loop_id:
-	for _, id := range identities {
-		for _, capability := range caps {
-			for _, p := range c.Path {
-				err = acl.Check(id, access.Required[capability], p)
-				if err != nil {
-					continue loop_id
-				}
-			}
-		}
-		err = signer.SetIdentity(id)
-		if err != nil {
-			return "", err
-		}
-		cert, err := access.DelegateUser(signer, to, caps, c.Path, c.User, lifetime)
-		if err != nil {
-			return "", err
-		}
-		return r.Save(cert)
-	}
-	return "", fmt.Errorf("ssh-agent: not enough permissions to issue this certificate (tried %d identities)", len(identities))
+	return r.Save(cert)
 }
 
 func (c *CertCmd) delegateAdmin(r *repo.Repository, to ssh.PublicKey, lifetime time.Duration) (path string, err error) {
