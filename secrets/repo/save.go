@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -10,16 +11,36 @@ import (
 	"strings"
 
 	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/value"
 )
 
 // Save objects to repository
 func (r *Repository) Save(x any) (path string, err error) {
-	switch value := x.(type) {
+	switch v := x.(type) {
 	case *access.Certificate:
-		return r.saveCert(value)
+		return r.saveCert(v)
+	case *value.Value:
+		return r.saveValue(v)
 	default:
 		return "", fmt.Errorf("can not save %T to repository", x)
 	}
+}
+
+func (r *Repository) saveValue(v *value.Value) (path string, err error) {
+	var buf = new(bytes.Buffer)
+	err = v.Serialize(buf)
+	if err != nil {
+		return "", err
+	}
+	data := buf.Bytes()
+	for _, p := range v.Path {
+		path = filepath.Join(r.root, secretsDir, p+ext)
+		err = os.WriteFile(path, data, 0600)
+		if err != nil {
+			return "", err
+		}
+	}
+	return path, nil
 }
 
 func (r *Repository) saveCert(cert *access.Certificate) (path string, err error) {

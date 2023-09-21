@@ -81,7 +81,7 @@ func (c *CertCmd) delegateUser(r *repo.Repository, to ssh.PublicKey, lifetime ti
 	if err != nil {
 		return "", err
 	}
-	signer, err := acl.FindAgent(caps, c.Path)
+	signer, err := acl.FindAgent(c.Path, caps...)
 	if err != nil {
 		return "", err
 	}

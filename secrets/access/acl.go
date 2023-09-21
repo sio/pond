@@ -57,6 +57,15 @@ func (acl *ACL) Close() error {
 	return acl.db.Close()
 }
 
+// Load access certificates by paths.
+// All previously known user certificates will be forgotten.
+func (acl *ACL) Load(adminpaths, userpaths []string) error {
+	if err := acl.LoadAdmin(adminpaths); err != nil {
+		return err
+	}
+	return acl.LoadUser(userpaths)
+}
+
 // Load user certificates by path.
 // All previously known user certificates will be forgotten.
 func (acl *ACL) LoadUser(paths []string) error {
@@ -244,7 +253,7 @@ func (acl *ACL) Dump() {
 var ErrPermissionDenied = errors.New("permission denied")
 
 // Connect to ssh-agent and find an identity that has sufficient permissions
-func (acl *ACL) FindAgent(caps []Capability, paths []string) (*agent.Conn, error) {
+func (acl *ACL) FindAgent(paths []string, caps ...Capability) (*agent.Conn, error) {
 	signer, err := agent.New(nil)
 	if err != nil {
 		return nil, err
@@ -273,5 +282,9 @@ loop_id:
 		}
 		return signer, nil
 	}
-	return fail(fmt.Errorf("ssh-agent: no matching identity out of %d tried", len(identities)))
+	capsShort := make([]string, len(caps))
+	for i := 0; i < len(caps); i++ {
+		capsShort[i] = caps[i].Short()
+	}
+	return fail(fmt.Errorf("ssh-agent: no matching identity out of %d tried: %v:%v", len(identities), capsShort, paths))
 }

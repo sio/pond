@@ -9,6 +9,13 @@ const (
 	Write         Capability = "pond/secrets: write secrets"
 )
 
+var short = map[Capability]string{
+	ManageWriters: "wA",
+	ManageReaders: "rA",
+	Read:          "r",
+	Write:         "w",
+}
+
 var Required = map[Capability]Capability{
 	Read:  ManageReaders,
 	Write: ManageWriters,
@@ -43,4 +50,12 @@ func (c Capability) Valid() bool {
 		return true
 	}
 	return false
+}
+
+func (c Capability) Short() string {
+	s, ok := short[c]
+	if !ok {
+		s = string(c)
+	}
+	return s
 }

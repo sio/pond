@@ -37,7 +37,7 @@ func TestDelegateAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() {
-		t.Fatalf("\n%s", result)
+		t.Fatalf("stderr and/or return code check failed:\n%s", result)
 	}
 	for _, path := range []string{
 		"/repo/access/admin/alice.01.cert",

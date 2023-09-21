@@ -6,12 +6,20 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
+
+	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/master"
+	"github.com/sio/pond/secrets/repo"
+	"github.com/sio/pond/secrets/util"
+	"github.com/sio/pond/secrets/value"
 )
 
 type SetCmd struct {
-	Dest  string `arg:"" name:"secret" help:"Path to secret in repository"`
-	Value string `xor:"v" arg:"" optional:"" name:"value" help:"Use CLI argument as plaintext value (optional)"`
-	File  string `xor:"v" short:"f" placeholder:"path" type:"existingfile" help:"Use file contents as value (default: read standard input)"`
+	Dest    string `arg:"" name:"secret" help:"Path to secret in repository"`
+	Value   string `xor:"v" arg:"" optional:"" name:"value" help:"Use CLI argument as plaintext value (optional)"`
+	File    string `xor:"v" short:"f" placeholder:"path" type:"existingfile" help:"Use file contents as value (default: read standard input)"`
+	Expires string `short:"x" default:"90d" help:"Time until value expires (default: ${default})"`
 }
 
 func (c *SetCmd) Run() error {
@@ -56,11 +64,56 @@ func (c *SetCmd) Run() error {
 			return err
 		}
 	}
-	return set(c.Dest, value)
+	lifetime, err := util.ParseDuration(c.Expires)
+	if err != nil {
+		return err
+	}
+	return set(c.Dest, value, lifetime)
 }
 
-func set(path, value string) error {
-	fmt.Printf("Path=%s\nValue=%s\n", path, value)
+func set(path, val string, lifetime time.Duration) error {
+	v := &value.Value{
+		Path:    []string{path},
+		Created: time.Now(),
+		Expires: time.Now().Add(lifetime),
+	}
+	repo, err := repo.Open(".")
+	if err != nil {
+		return err
+	}
+	master, err := master.LoadCertificate(repo.MasterCert())
+	if err != nil {
+		return err
+	}
+	acl, err := access.Open(repo.MasterCert())
+	if err != nil {
+		return err
+	}
+	err = acl.Load(repo.AdminCerts(), repo.UserCerts())
+	if err != nil {
+		return err
+	}
+	dirs := make([]string, len(v.Path))
+	for index, path := range v.Path {
+		dirs[index] = filepath.Dir(path)
+	}
+	signer, err := acl.FindAgent(dirs, access.Write)
+	if err != nil {
+		return err
+	}
+	err = v.Encrypt(master, []byte(val))
+	if err != nil {
+		return err
+	}
+	err = v.Sign(signer)
+	if err != nil {
+		return err
+	}
+	out, err := repo.Save(v)
+	if err != nil {
+		return err
+	}
+	ok("Saved secret to %s", out)
 	return nil
 }
 

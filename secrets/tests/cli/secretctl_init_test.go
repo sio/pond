@@ -41,7 +41,7 @@ func TestRepoInitialization(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !result.Ok() {
-		t.Fatalf("\n%s", result)
+		t.Fatalf("stderr and/or return code check failed:\n%s", result)
 	}
 	if !strings.Contains(result.Output(), "Initialized new secrets repository: /repo") {
 		t.Fatalf("unexpected output after successful execution:\n%s", result)
