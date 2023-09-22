@@ -95,6 +95,7 @@ func main() {
 		}()
 	}
 	wg.Wait()
+	info("Total %s (%d bytes)", humanBytes(size), size)
 
 	// Sync is needed only for correct time/speed measurement,
 	// reads will work correctly even before file is fully synced to disk
@@ -105,8 +106,7 @@ func main() {
 
 	elapsed := time.Since(start)
 	speed := int64(float64(size) / elapsed.Seconds())
-	info("Time %s", elapsed)
-	info("Total %s (%d bytes)", humanBytes(size), size)
+	info("Time  %s", elapsed)
 	info("Speed %s/s (%d bytes per second)", humanBytes(speed), speed)
 
 	err = check(src, dest)
