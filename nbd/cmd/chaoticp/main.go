@@ -152,7 +152,7 @@ func humanBytes(b int64) string {
 		}
 		b /= step
 	}
-	return fmt.Sprintf("%d%s", b, units[u])
+	return fmt.Sprintf("%d %s", b, units[u])
 }
 
 type chunkCopier struct {
