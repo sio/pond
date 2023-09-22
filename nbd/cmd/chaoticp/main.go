@@ -1,6 +1,12 @@
 // Chaotic file copier
 //
 // Simulates random file access by copying data with multiple threads
+//
+// TODO: Small block sizes lead to high fragmentation of destination file. Any workarounds?
+//       - man 2 fallocate, posix_fallocate: Linux specific, and even then not
+//         all filesystems support this (notable absentee: ZFS)
+//       - Writing zeroes continuously does not guarantee absence of fragmentation
+//       - Should probably fall back to bare Truncate() if fallocate() is not supported
 
 package main
 
@@ -18,7 +24,7 @@ import (
 )
 
 const (
-	chunkSize   = 16 * 1024
+	chunkSize   = 16 * 1024 * 1024
 	numWorkers  = 10
 	enableDebug = false
 )
@@ -50,7 +56,7 @@ func main() {
 		fatal(err)
 	}
 	size := stat.Size()
-	err = dest.Truncate(size)
+	err = dest.Truncate(size) // TODO: preallocate full file to avoid fragmentation? Reads from dest are very slow now. Use fallocate on Linux, write zeroes otherwise
 	if err != nil {
 		fatal(err)
 	}
@@ -125,13 +131,14 @@ func check(a, b *os.File) error {
 	if err != nil {
 		return err
 	}
+	buf := make([]byte, chunkSize)
 	var aHash = sha512.New()
-	_, err = io.Copy(aHash, a)
+	_, err = io.CopyBuffer(aHash, a, buf)
 	if err != nil {
 		return err
 	}
 	var bHash = sha512.New()
-	_, err = io.Copy(bHash, b)
+	_, err = io.CopyBuffer(bHash, b, buf)
 	if err != nil {
 		return err
 	}
