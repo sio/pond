@@ -96,6 +96,8 @@ func main() {
 	}
 	wg.Wait()
 
+	// Sync is needed only for correct time/speed measurement,
+	// reads will work correctly even before file is fully synced to disk
 	err = dest.Sync()
 	if err != nil {
 		fatal(err)
