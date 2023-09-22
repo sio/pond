@@ -115,37 +115,39 @@ func main() {
 	info("Time  %s", elapsed)
 	info("Speed %s/s (%d bytes per second)", humanBytes(speed), speed)
 
-	err = check(src, dest)
+	sum, err := checksum(src, dest)
 	if err != nil {
 		fatal("Hash check failed: %v", err)
 	}
-	info("SHA512 OK")
+	info("SHA512 OK: %x", sum)
 }
 
-func check(a, b *os.File) error {
+func checksum(a, b *os.File) ([]byte, error) {
 	_, err := a.Seek(0, io.SeekStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = b.Seek(0, io.SeekStart)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	buf := make([]byte, chunkSize)
 	var aHash = sha512.New()
 	_, err = io.CopyBuffer(aHash, a, buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var bHash = sha512.New()
 	_, err = io.CopyBuffer(bHash, b, buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !bytes.Equal(aHash.Sum(nil), bHash.Sum(nil)) {
-		return fmt.Errorf("hash mismatch:\n%x\n%x", aHash.Sum(nil), bHash.Sum(nil))
+	aSum := aHash.Sum(nil)
+	bSum := bHash.Sum(nil)
+	if !bytes.Equal(aSum, bSum) {
+		return nil, fmt.Errorf("hash mismatch:\n%x\n%x", aSum, bSum)
 	}
-	return nil
+	return aSum, nil
 }
 
 var units = [...]string{"B", "KB", "MB", "GB", "TB"}
