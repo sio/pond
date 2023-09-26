@@ -18,7 +18,7 @@ import (
 // Lightweight sandbox environment for Linux
 type Sandbox struct {
 	commands [][]string
-	files    map[string]none
+	files    map[string]string
 	env      []string
 	tmpdir   string
 	chdir    string
@@ -85,15 +85,30 @@ func (s *Sandbox) CommandWithLibs(args ...string) {
 	s.Command(args...)
 }
 
-// Add file to the sandbox environment
+// Add file to the sandbox environment (same path as source)
 func (s *Sandbox) Add(filename ...string) {
 	if s.files == nil {
 		s.lock.Lock()
-		s.files = make(map[string]none)
+		s.files = make(map[string]string)
 		s.lock.Unlock()
 	}
 	for _, file := range filename {
-		s.files[file] = none{}
+		s.files[file] = file
+	}
+}
+
+// Add file to the specific location in the sandbox environment
+func (s *Sandbox) Copy(src, dest string) error {
+	if s.files == nil {
+		s.lock.Lock()
+		s.files = make(map[string]string)
+		s.lock.Unlock()
+	}
+	if s.tmpdir == "" {
+		s.files[src] = dest
+		return nil
+	} else {
+		return cp(src, filepath.Join(s.tmpdir, dest))
 	}
 }
 
@@ -118,14 +133,14 @@ func (s *Sandbox) build() error {
 		return err
 	}
 
-	for src := range s.files {
-		dest := filepath.Join(s.tmpdir, src)
+	for src, dest := range s.files {
+		dest := filepath.Join(s.tmpdir, dest)
 		if !strings.HasPrefix(dest, s.tmpdir) {
 			return fmt.Errorf("possible path traversal attempt: %s -> %s", src, dest)
 		}
 	}
-	for src := range s.files {
-		dest := filepath.Join(s.tmpdir, src)
+	for src, dest := range s.files {
+		dest := filepath.Join(s.tmpdir, dest)
 		err = cp(src, dest)
 		if err != nil {
 			return err
@@ -152,5 +167,3 @@ func (s *Sandbox) Cleanup() {
 	s.commands = nil
 	s.files = nil
 }
-
-type none struct{}
