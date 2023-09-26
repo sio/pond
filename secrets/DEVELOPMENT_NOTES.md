@@ -1,50 +1,9 @@
 # Assorted development notes
 
-## CLI UX mockup
+## CLI UX mockup - not implemented yet
 
-### Initializing secrets repository
-
-```console
-$ secretctl init /path/to/master-key.pub
-```
-
-- Check if current directory is empty
-- Check if master key is loaded into ssh-agent
-- Create directory structure
-- Generate master key certificate
-
-
-### Issuing certificates for users/admins
-
-```console
-$ secretctl cert --user alice --key /path/to/alice-key.pub --read --write /first/path /second/path
-$ secretctl cert -u alice -k /path/to/alice-key.pub -rw /first/path /second/path
-$ secretctl cert -u bob -k /path/to/bob-key.pub -r /bobs/readonly/path
-$ secretctl cert --admin root -k /path/to/admin-key.pub -rw /
-$ secretctl cert -a charlie -k /path/to/charlie-key.pub -r /specific/prefix
-```
-
-- Check if ssh-agent contains a key that is allowed to delegate capabilities:
-    - For issuing admin certs: master key
-    - For issuing user certs: admin key with proper set of caps and paths
-    - Try all certs from ssh-agent until one fits or none left to try
-- Generate a certificate
-- Save to
-    - $root/access/user/$name-$index.cert
-    - $root/access/admin/$name-$index.cert
-
-
-### Writing secrets
-
-```console
-$ secretctl set /path/to/secret -v "literal-value"
-$ secretctl set /path/to/secret -f /from/file.txt
-$ cat /from/anywhere.txt | secretctl set /path/to/secret
-$ secretctl set /path/to/secret  # opens in $EDITOR
-$ secretctl cp /source/path /destination/path
-$ secretctl mv /source/path /destination/path
-$ secretctl rm /secret/to/remove
-```
+See [docs/cli_overview.md](docs/cli_overview.md) for the parts that have been
+implemented already.
 
 
 ### Serving secrets
@@ -113,3 +72,12 @@ $ secretctl extend path/to/cert [90d]
 - Save to a new temporary file in the same directory
 - Atomically replace original file with the new one while keeping a backup
   under incremented index
+
+
+### Managing secrets
+
+```
+$ secretctl cp /source/path /destination/path
+$ secretctl mv /source/path /destination/path
+$ secretctl rm /secret/to/remove
+```
