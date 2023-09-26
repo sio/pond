@@ -71,3 +71,28 @@ Flags:
   -x, --expires="90d"    Certificate validity duration (default: 90d)
 ```
 <!--SECTION bin/secretctl@linux-amd64 cert --help END OFFSET 1-->
+
+
+## Writing secret values
+
+<!--SECTION bin/secretctl@linux-amd64 set --help START OFFSET 1-->
+```console
+$ bin/secretctl@linux-amd64 set --help
+Usage: secretctl@linux-amd64 set <secret> [<value>]
+
+Set secret value from argument/file/stdin/$EDITOR
+
+Arguments:
+  <secret>     Path to secret in repository
+  [<value>]    Use CLI argument as plaintext value (optional)
+
+Flags:
+  -h, --help             Show context-sensitive help.
+  -C, --chdir=path       Change working directory prior to executing
+                         ($SECRETS_DIR)
+
+  -f, --file=path        Use file contents as value (default: read standard
+                         input)
+  -x, --expires="90d"    Time until value expires (default: 90d)
+```
+<!--SECTION bin/secretctl@linux-amd64 set --help END OFFSET 1-->

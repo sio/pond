@@ -23,6 +23,7 @@ func TestSecretctlHelp(t *testing.T) {
 		{secretctl, "--help"},
 		{secretctl, "init", "--help"},
 		{secretctl, "cert", "--help"},
+		{secretctl, "set", "--help"},
 	}
 	os.Chdir("../..")
 	var template = new(block.Template)
