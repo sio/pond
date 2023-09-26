@@ -17,6 +17,6 @@ Client and server implement PKI in a similar fashion:
 - SSH key is used to issue root CA certificate
 - Ephemeral certificates are issued for all allowed counterparties
   (can we do this knowing only their public key, without a signed CSR?)
-- These certificates from a CA store for establishing TLS connections
+- These certificates form a CA store for establishing TLS connections
 - Ephemeral certificate issued by our root CA is used to represent our side in
   TLS handshake
