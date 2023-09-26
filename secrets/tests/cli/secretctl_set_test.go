@@ -14,9 +14,11 @@ func TestSecretctlSet(t *testing.T) {
 	box.Setenv("SECRETS_DIR", "/repo")
 	box.Command(secretctl, "init", "tests/keys/master.pub")
 	box.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-r", "/users/alice/")
-	box.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-rw", "/")
+	box.Command(secretctl, "cert", "--admin=alice", "--key=tests/keys/alice.pub", "-rw", "/alice")
 	box.Command(secretctl, "cert", "--user=bob", "--key=tests/keys/bob.pub", "-rw", "/")
 	box.Command(secretctl, "set", "/hello-world", "HELLO_WORLD", "-x", "10d")
+	box.Command(secretctl, "set", "/alice/password", "PA$$W0RD!")
+	box.Command(secretctl, "set", "/bob/../alice/password", "PA$$W0RD!")
 	err := box.Build()
 	if err != nil {
 		t.Fatal(err)

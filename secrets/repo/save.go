@@ -35,6 +35,13 @@ func (r *Repository) saveValue(v *value.Value) (path string, err error) {
 	data := buf.Bytes()
 	for _, p := range v.Path {
 		path = filepath.Join(r.root, secretsDir, p+ext)
+		if !strings.HasPrefix(path, r.root+"/") {
+			return "", fmt.Errorf("output path does not start in repository root: %s", path)
+		}
+		err = os.MkdirAll(filepath.Dir(path), 0700)
+		if err != nil {
+			return "", err
+		}
 		err = os.WriteFile(path, data, 0600)
 		if err != nil {
 			return "", err
