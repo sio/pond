@@ -13,8 +13,6 @@ import (
 )
 
 func TestSelfSigned(t *testing.T) {
-	experimental(t)
-
 	template := &x509.Certificate{
 		IsCA:         false,
 		SerialNumber: big.NewInt(1),
@@ -38,6 +36,11 @@ func TestSelfSigned(t *testing.T) {
 	der, err := x509.CreateCertificate(rand.Reader, template, template, recepient, ca)
 	if err != nil {
 		t.Fatalf("x509: %v", err)
+	}
+
+	// Save cert for further inspection
+	if !experimentsEnabled() {
+		return
 	}
 	temp, err := os.CreateTemp("", "selfsigned")
 	if err != nil {
