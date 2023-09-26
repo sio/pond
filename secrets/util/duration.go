@@ -22,17 +22,23 @@ func ParseDuration(s string) (time.Duration, error) {
 	if len(dayTags) > 1 {
 		return 0, fmt.Errorf("day unit appears multiple times in duration string: %s", s)
 	}
-	days, err := strconv.Atoi(dayTags[0][:len(dayTags[0])-1])
+	daysCount, err := strconv.Atoi(dayTags[0][:len(dayTags[0])-1])
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse day units: %w", err)
 	}
+	days := time.Duration(daysCount) * time.Hour * 24
 	remainder := daysRegex.ReplaceAllString(s, "")
+	var sign time.Duration = 1
+	if len(remainder) > 0 && remainder[0] == '-' {
+		sign = -1
+		remainder = remainder[1:]
+	}
 	if len(remainder) == 0 {
-		return time.Duration(days) * time.Hour * 24, nil
+		return sign * days, nil
 	}
 	result, err = time.ParseDuration(remainder)
 	if err != nil {
 		return 0, err
 	}
-	return result + time.Duration(days)*time.Hour*24, nil
+	return sign * (result + days), nil
 }
