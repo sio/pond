@@ -59,40 +59,44 @@ func (acl *ACL) Close() error {
 
 // Load access certificates by paths.
 // All previously known user certificates will be forgotten.
-func (acl *ACL) Load(adminpaths, userpaths []string) error {
-	if err := acl.LoadAdmin(adminpaths); err != nil {
-		return err
+func (acl *ACL) Load(adminpaths, userpaths []string) (warn []error, err error) {
+	if warn, err = acl.LoadAdmin(adminpaths); err != nil {
+		return warn, err
 	}
-	return acl.LoadUser(userpaths)
+	warn2, err := acl.LoadUser(userpaths)
+	return append(warn, warn2...), err
 }
 
 // Load user certificates by path.
 // All previously known user certificates will be forgotten.
-func (acl *ACL) LoadUser(paths []string) error {
+func (acl *ACL) LoadUser(paths []string) (warn []error, err error) {
 	return acl.loadCerts(paths, false)
 }
 
 // Load administrator certificates by path.
 // All previously known administrator certificates will be forgotten.
-func (acl *ACL) LoadAdmin(paths []string) error {
+func (acl *ACL) LoadAdmin(paths []string) (warn []error, err error) {
 	return acl.loadCerts(paths, true)
 }
 
-func (acl *ACL) loadCerts(paths []string, admin bool) (err error) {
-	certs := make([]*Certificate, len(paths))
-	for index, path := range paths {
-		certs[index], err = LoadCertificate(path)
+func (acl *ACL) loadCerts(paths []string, admin bool) (warn []error, err error) {
+	certs := make(map[string]*Certificate)
+	for _, path := range paths {
+		cert, err := LoadCertificate(path)
 		if err != nil {
-			return fmt.Errorf("loading %s: %w", path, err)
+			warn = append(warn, fmt.Errorf("loading %s: %w", path, err))
+			continue
 		}
-		err = acl.Validate(certs[index])
+		err = acl.Validate(cert)
 		if err != nil {
-			return fmt.Errorf("validating %s: %w", path, err)
+			warn = append(warn, fmt.Errorf("validating %s: %w", path, err))
+			continue
 		}
+		certs[path] = cert
 	}
 	tx, err := acl.db.Begin()
 	if err != nil {
-		return err
+		return warn, err
 	}
 	defer func() { _ = tx.Rollback() }()
 	var remove [2]uint8
@@ -109,10 +113,9 @@ func (acl *ACL) loadCerts(paths []string, admin bool) (err error) {
 		remove[1],
 	)
 	if err != nil {
-		return fmt.Errorf("sql delete: %w", err)
+		return warn, fmt.Errorf("sql delete: %w", err)
 	}
-	for index, path := range paths {
-		cert := certs[index]
+	for path, cert := range certs {
 		fingerprint := ssh.FingerprintSHA256(cert.PublicKey())
 		for _, p := range cert.Paths() {
 			if p[len(p)-1] != '/' {
@@ -128,16 +131,16 @@ func (acl *ACL) loadCerts(paths []string, admin bool) (err error) {
 					cert.ValidBefore(),
 				)
 				if err != nil {
-					return fmt.Errorf("sql insert: %w: %s: %s [%s]", err, path, p, c)
+					return warn, fmt.Errorf("sql insert: %w: %s: %s [%s]", err, path, p, c)
 				}
 			}
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return warn, err
 	}
-	return nil
+	return warn, nil
 }
 
 // Validate access certificate

@@ -77,9 +77,12 @@ func (c *CertCmd) delegateUser(r *repo.Repository, to ssh.PublicKey, lifetime ti
 	if err != nil {
 		return "", err
 	}
-	err = acl.LoadAdmin(r.AdminCerts())
+	warnings, err := acl.LoadAdmin(r.AdminCerts())
 	if err != nil {
 		return "", err
+	}
+	for _, w := range warnings {
+		warn(w)
 	}
 	signer, err := acl.FindAgent(c.Path, caps...)
 	if err != nil {

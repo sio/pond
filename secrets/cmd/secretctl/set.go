@@ -89,9 +89,12 @@ func set(path, val string, lifetime time.Duration) error {
 	if err != nil {
 		return err
 	}
-	err = acl.Load(repo.AdminCerts(), repo.UserCerts())
+	warnings, err := acl.Load(repo.AdminCerts(), repo.UserCerts())
 	if err != nil {
 		return err
+	}
+	for _, w := range warnings {
+		warn(w)
 	}
 	dirs := make([]string, len(v.Path))
 	for index, path := range v.Path {

@@ -42,6 +42,13 @@ func ok(message any, args ...any) {
 	out(os.Stdout, message, args...)
 }
 
+func warn(message any, args ...any) {
+	var buf = new(bytes.Buffer)
+	out(buf, message, args...)
+	str := buf.String()
+	out(os.Stderr, "Warning: %s", str[:len(str)-1])
+}
+
 func fail(message any, args ...any) {
 	var buf = new(bytes.Buffer)
 	out(buf, message, args...)
@@ -60,12 +67,16 @@ func out(dest io.Writer, message any, args ...any) {
 		_, _ = fmt.Fprintln(dest, message)
 		return
 	}
-	if len(s) > 0 && s[len(s)-1] != '\n' {
-		s += "\n"
+	for len(s) > 0 {
+		last := s[len(s)-1]
+		if last != '\n' && last != '\r' && last != '\t' && last != ' ' {
+			break
+		}
+		s = s[:len(s)-1]
 	}
 	if len(args) == 0 {
-		_, _ = fmt.Fprint(dest, s)
+		_, _ = fmt.Fprintln(dest, s)
 		return
 	}
-	_, _ = fmt.Fprintf(dest, s, args...)
+	_, _ = fmt.Fprintf(dest, s+"\n", args...)
 }
