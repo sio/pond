@@ -24,11 +24,6 @@
 - Make use of context.Context:
     - Set deadline
     - Use CancelFunc
-- SSH client sometimes errors out while accessing API with either
-  `client_loop: send disconnect: Broken pipe` or
-  `client_loop: send disconnect: Connection reset by peer`.
-  This happens after successfully writing API response.
-  May be it's related to TCP connection life cycle on server?
 - Provide tools to rekey all secrets and certificates to a new master key
 
 
