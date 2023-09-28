@@ -55,6 +55,9 @@ func New(listen, repository string) (*Server, error) {
 		s.addr = addr.Path
 	case "tcp", "tcp4", "tcp6":
 		s.addr = addr.Host
+	case "ssh":
+		s.proto = "tcp"
+		s.addr = addr.Host
 	default:
 		return nil, fmt.Errorf("listening on %s not implemented", addr.Scheme)
 	}
