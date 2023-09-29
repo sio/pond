@@ -34,7 +34,7 @@ func Create(path string, master *master.Certificate) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = file.Write(master.Marshal())
+	_, err = file.Write(master.Marshal()) // TODO: store master public key along with certificate? It seems too difficult to extract the key from cert for writing to known_hosts file
 	if err != nil {
 		return nil, err
 	}
