@@ -36,11 +36,7 @@ func TestNewCertificate(t *testing.T) {
 	if err == nil {
 		return
 	}
-	file, err := os.OpenFile(certPath, os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		t.Fatalf("OpenFile: %v", err)
-	}
-	_, err = file.Write(cert.Marshal())
+	err = os.WriteFile(certPath, cert.Marshal(), 0755)
 	if err != nil {
 		t.Fatalf("writing certificate to disk: %v", err)
 	}

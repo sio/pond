@@ -87,11 +87,7 @@ func (r *Repository) saveCert(cert *access.Certificate) (path string, err error)
 			return "", err
 		}
 	}
-	out, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return "", err
-	}
-	_, err = out.Write(cert.Marshal())
+	err = os.WriteFile(path, cert.Marshal(), 0644)
 	if err != nil {
 		return "", err
 	}
