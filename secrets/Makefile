@@ -41,4 +41,14 @@ git-config:
 	git config --local diff.ssh-certificate.cachetextconv true
 
 
+.PHONY: manual-test-prepare
+manual-test-prepare:
+	chmod go-rwx tests/keys/*
+	ssh-add tests/keys/master tests/keys/alice tests/keys/bob
+	bin/secretctl$(BIN_SUFFIX) init tests/keys/master.pub
+	bin/secretctl$(BIN_SUFFIX) cert --admin=alice --key=tests/keys/alice.pub -rw / /users/alice
+	bin/secretctl$(BIN_SUFFIX) cert --user=bob --key=tests/keys/bob.pub -rw /users
+	bin/secretctl$(BIN_SUFFIX) set /users/domain users.domain.tld
+	bin/secretctl$(BIN_SUFFIX) set /domain top.domain.tld
+
 include ../Makefile.golang
