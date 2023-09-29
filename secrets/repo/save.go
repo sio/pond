@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/sio/pond/secrets/access"
+	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/value"
 )
 
@@ -19,6 +20,8 @@ func (r *Repository) Save(x any) (path string, err error) {
 	switch v := x.(type) {
 	case *access.Certificate:
 		return r.saveCert(v)
+	case *master.Certificate:
+		return r.saveMaster(v)
 	case *value.Value:
 		return r.saveValue(v)
 	default:
@@ -89,6 +92,15 @@ func (r *Repository) saveCert(cert *access.Certificate) (path string, err error)
 		return "", err
 	}
 	_, err = out.Write(cert.Marshal())
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (r *Repository) saveMaster(cert *master.Certificate) (path string, err error) {
+	path = filepath.Join(r.root, accessDir, masterCert)
+	err = os.WriteFile(path, cert.Marshal(), 0644) // TODO: store master public key along with certificate? It seems too difficult to extract the key from cert for writing to known_hosts file
 	if err != nil {
 		return "", err
 	}
