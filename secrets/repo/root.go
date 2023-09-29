@@ -13,9 +13,10 @@ const (
 	secretsDir = "secrets"
 	usersDir   = "user"
 	adminDir   = "admin"
-	masterCert = "master.cert"
+	masterFile = "master"
 	ext        = ".x"
 	certExt    = ".cert"
+	pubExt     = ".pub"
 )
 
 // Secrets repository on local filesystem
@@ -59,7 +60,7 @@ loop:
 				continue loop
 			}
 		}
-		if stat, err := os.Stat(filepath.Join(path, accessDir, masterCert)); err != nil || stat.IsDir() {
+		if stat, err := os.Stat(filepath.Join(path, accessDir, masterFile+certExt)); err != nil || stat.IsDir() {
 			continue loop
 		}
 		return path, nil
@@ -71,7 +72,7 @@ func (r *Repository) MasterCert() string {
 	if r.root == "" {
 		return ""
 	}
-	return filepath.Join(r.root, accessDir, masterCert)
+	return filepath.Join(r.root, accessDir, masterFile+certExt)
 }
 
 // Paths to user certificates

@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/sio/pond/secrets/access"
 	"github.com/sio/pond/secrets/master"
 	"github.com/sio/pond/secrets/value"
@@ -95,8 +97,13 @@ func (r *Repository) saveCert(cert *access.Certificate) (path string, err error)
 }
 
 func (r *Repository) saveMaster(cert *master.Certificate) (path string, err error) {
-	path = filepath.Join(r.root, accessDir, masterCert)
-	err = os.WriteFile(path, cert.Marshal(), 0644) // TODO: store master public key along with certificate? It seems too difficult to extract the key from cert for writing to known_hosts file
+	path = filepath.Join(r.root, accessDir, masterFile+pubExt)
+	err = os.WriteFile(path, ssh.MarshalAuthorizedKey(cert.PublicKey()), 0644)
+	if err != nil {
+		return "", err
+	}
+	path = filepath.Join(r.root, accessDir, masterFile+certExt)
+	err = os.WriteFile(path, cert.Marshal(), 0644)
 	if err != nil {
 		return "", err
 	}
