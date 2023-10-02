@@ -51,4 +51,13 @@ manual-test-prepare:
 	bin/secretctl$(BIN_SUFFIX) set /users/domain users.domain.tld
 	bin/secretctl$(BIN_SUFFIX) set /domain top.domain.tld
 
+.PHONY: bench-stress
+bench-stress: SECRETD_BENCH_SERVER?=tcp://localhost:20002
+bench-stress: SECRETD_BENCH_CLIENT_KEY?=$(abspath tests/keys/bob)
+bench-stress:
+	go test ./tests/stress -bench=ServerReply -benchmem -benchtime=10s
+export SECRETD_BENCH_SERVER
+export SECRETD_BENCH_CLIENT_KEY
+
+
 include ../Makefile.golang
