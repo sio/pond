@@ -55,9 +55,10 @@ manual-test-prepare:
 bench-stress: SECRETD_BENCH_SERVER?=tcp://localhost:20002
 bench-stress: SECRETD_BENCH_CLIENT_KEY?=$(abspath tests/keys/bob)
 bench-stress: SECRETD_BENCH_QUERY?=foo,bar
+bench-stress: GOBENCH_COUNT?=1
 bench-stress: GOBENCH_TIME?=10s
 bench-stress:
-	go test ./tests/stress -bench=. -benchmem -benchtime=$(GOBENCH_TIME) -timeout=15s$(GOBENCH_TIME)
+	$(GO) test ./tests/stress -bench=. -benchmem -benchtime=$(GOBENCH_TIME) -count=$(GOBENCH_COUNT) -timeout=15s$(GOBENCH_TIME)
 export SECRETD_BENCH_SERVER
 export SECRETD_BENCH_CLIENT_KEY
 export SECRETD_BENCH_QUERY
