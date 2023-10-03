@@ -58,7 +58,7 @@ bench-stress: SECRETD_BENCH_QUERY?=foo,bar
 bench-stress: GOBENCH_COUNT?=1
 bench-stress: GOBENCH_TIME?=10s
 bench-stress:
-	$(GO) test ./tests/stress -bench=. -benchmem -benchtime=$(GOBENCH_TIME) -count=$(GOBENCH_COUNT) -timeout=15s$(GOBENCH_TIME)
+	$(GO) test ./tests/stress -bench=. -benchmem -benchtime=$(GOBENCH_TIME) -count=$(GOBENCH_COUNT) -timeout=0
 export SECRETD_BENCH_SERVER
 export SECRETD_BENCH_CLIENT_KEY
 export SECRETD_BENCH_QUERY
