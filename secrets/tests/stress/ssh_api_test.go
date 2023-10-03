@@ -1,4 +1,7 @@
+// Simple stress tests for arbitrary secretd server
 package stress
+
+// TODO: add benchmark against synthetic server running with a custom multicore ssh-agent
 
 import (
 	"testing"
