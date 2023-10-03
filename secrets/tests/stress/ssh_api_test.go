@@ -12,7 +12,9 @@ import (
 	"golang.org/x/crypto/ssh"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 )
 
 func BenchmarkServerReply(b *testing.B) {
@@ -49,51 +51,76 @@ func BenchmarkServerReply(b *testing.B) {
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
-	stdin := new(bytes.Buffer)
-	stdout := new(bytes.Buffer)
-	for i := 0; i < b.N; i++ {
+	iterate := func(stdin, stdout *bytes.Buffer) {
 		stdin.Reset()
 		stdout.Reset()
-		func() {
-			client, err := ssh.Dial(server.Scheme, server.Host, clientConf)
-			if err != nil {
-				b.Fatalf("ssh dial: %v", err)
+		client, err := ssh.Dial(server.Scheme, server.Host, clientConf)
+		if err != nil {
+			b.Fatalf("ssh dial: %v", err)
+		}
+		defer func() { _ = client.Close() }()
+		session, err := client.NewSession()
+		if err != nil {
+			b.Fatalf("ssh session: %v", err)
+		}
+		defer func() { _ = session.Close() }()
+		_, err = fmt.Fprintln(stdin, query)
+		if err != nil {
+			b.Fatalf("writing to stdin buffer: %v", err)
+		}
+		session.Stdin = stdin
+		session.Stdout = stdout
+		err = session.Shell()
+		if err != nil {
+			b.Fatalf("session shell: %v", err)
+		}
+		err = session.Wait()
+		if err != nil {
+			b.Fatalf("session error: %v", err)
+		}
+		var r = new(reply)
+		err = json.NewDecoder(stdout).Decode(r)
+		if err != nil {
+			b.Fatalf("json reply: %v", err)
+		}
+		if len(r.Errors) != 0 || len(r.Secrets) != len(queryItems) {
+			b.Fatalf("unexpected reply: %s", stdout.String())
+		}
+		for _, item := range queryItems {
+			if len(r.Secrets[item]) == 0 {
+				b.Fatalf("missing value for secret %q: %s", item, stdout.String())
 			}
-			defer func() { _ = client.Close() }()
-			session, err := client.NewSession()
-			if err != nil {
-				b.Fatalf("ssh session: %v", err)
-			}
-			defer func() { _ = session.Close() }()
-			_, err = fmt.Fprintln(stdin, query)
-			if err != nil {
-				b.Fatalf("writing to stdin buffer: %v", err)
-			}
-			session.Stdin = stdin
-			session.Stdout = stdout
-			err = session.Shell()
-			if err != nil {
-				b.Fatalf("session shell: %v", err)
-			}
-			err = session.Wait()
-			if err != nil {
-				b.Fatalf("session error: %v", err)
-			}
-			var r = new(reply)
-			err = json.NewDecoder(stdout).Decode(r)
-			if err != nil {
-				b.Fatalf("json reply: %v", err)
-			}
-			if len(r.Errors) != 0 || len(r.Secrets) != len(queryItems) {
-				b.Fatalf("unexpected reply: %s", stdout.String())
-			}
-			for _, item := range queryItems {
-				if len(r.Secrets[item]) == 0 {
-					b.Fatalf("missing value for secret %q: %s", item, stdout.String())
+		}
+	}
+
+	// Saturate all available CPUs with stress testing
+	//
+	// Multiple requests per CPU are used to account for i/o pauses.
+	// Specific number (5 workers per CPU) was chosen empirically after
+	// a round of manual tests.
+	const workersPerCPU = 5
+	var wg sync.WaitGroup
+	next := make(chan bool)
+	for i := 0; i < runtime.NumCPU()*workersPerCPU; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			stdin := new(bytes.Buffer)
+			stdout := new(bytes.Buffer)
+			for {
+				iterate(stdin, stdout)
+				_, ok := <-next // accept next job only after finishing the previous one
+				if !ok {
+					return
 				}
 			}
 		}()
 	}
+	for i := 0; i < b.N; i++ {
+		next <- true // blocks until one of previous jobs is finished
+	}
+	close(next)
+	wg.Wait()
 }
 
 type reply struct {
