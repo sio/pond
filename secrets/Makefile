@@ -54,10 +54,13 @@ manual-test-prepare:
 .PHONY: bench-stress
 bench-stress: SECRETD_BENCH_SERVER?=tcp://localhost:20002
 bench-stress: SECRETD_BENCH_CLIENT_KEY?=$(abspath tests/keys/bob)
+bench-stress: SECRETD_BENCH_QUERY?=foo,bar
+bench-stress: GOBENCH_TIME?=10s
 bench-stress:
-	go test ./tests/stress -bench=ServerReply -benchmem -benchtime=10s
+	go test ./tests/stress -bench=. -benchmem -benchtime=$(GOBENCH_TIME)
 export SECRETD_BENCH_SERVER
 export SECRETD_BENCH_CLIENT_KEY
+export SECRETD_BENCH_QUERY
 
 
 include ../Makefile.golang

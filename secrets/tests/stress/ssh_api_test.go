@@ -9,9 +9,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	"net/url"
 	"os"
+	"strings"
 )
-
-const query = `["hello", "world"]`
 
 func BenchmarkServerReply(b *testing.B) {
 	addr := os.Getenv("SECRETD_BENCH_SERVER")
@@ -22,6 +21,12 @@ func BenchmarkServerReply(b *testing.B) {
 	if err != nil {
 		b.Fatalf("could not parse $SECRETD_BENCH_SERVER url: %v", err)
 	}
+	query := os.Getenv("SECRETD_BENCH_QUERY")
+	if query == "" {
+		b.Fatal("benchmark query not specified: $SECRETD_BENCH_QUERY (comma separated secret names)")
+	}
+	queryItems := strings.Split(query, ",")
+	query = fmt.Sprintf(`["%s"]`, strings.Join(queryItems, `","`))
 	keyPath := os.Getenv("SECRETD_BENCH_CLIENT_KEY")
 	if keyPath == "" {
 		b.Fatal("client key not specified: $SECRETD_BENCH_CLIENT_KEY")
@@ -76,8 +81,13 @@ func BenchmarkServerReply(b *testing.B) {
 			if err != nil {
 				b.Fatalf("json reply: %v", err)
 			}
-			if len(r.Secrets["hello"]) == 0 { // XXX: depends on query
+			if len(r.Errors) != 0 || len(r.Secrets) != len(queryItems) {
 				b.Fatalf("unexpected reply: %s", stdout.String())
+			}
+			for _, item := range queryItems {
+				if len(r.Secrets[item]) == 0 {
+					b.Fatalf("missing value for secret %q: %s", item, stdout.String())
+				}
 			}
 		}()
 	}
