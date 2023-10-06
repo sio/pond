@@ -19,6 +19,7 @@ import (
 const (
 	modeRegular   uint32 = 0100000
 	modeDirectory uint32 = 0040000
+	modeSymlink   uint32 = 0120000
 	pathSeparator        = "/"
 )
 
@@ -65,6 +66,18 @@ func (cpio *Archive) Copy(src, dest string) error {
 		return err
 	}
 	return nil
+}
+
+// Create a symbolic link inside cpio archive
+func (cpio *Archive) Link(target, linkname string) error {
+	return cpio.write(
+		strings.NewReader(target+"\x00"),
+		linkname,
+		Header{
+			mode:     modeSymlink,
+			filesize: uint32(len(target) + 1),
+		},
+	)
 }
 
 func (cpio *Archive) write(data io.Reader, path string, header Header) error {
