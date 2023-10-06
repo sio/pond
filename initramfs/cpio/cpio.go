@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,20 +44,26 @@ type Archive struct {
 
 // Copy local file to cpio archive
 func (cpio *Archive) Copy(src, dest string) error {
-	header, err := fileHeader(src)
-	if err != nil {
-		return err
-	}
 	file, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = file.Close() }()
-	err = cpio.write(file, dest, header)
+	stat, err := file.Stat()
 	if err != nil {
 		return err
 	}
-	return nil
+	if !stat.Mode().IsRegular() && (stat.Mode()&fs.ModeType != fs.ModeSymlink) {
+		return fmt.Errorf("not a regular file: %s (%s)", src, stat.Mode())
+	}
+	return cpio.write(
+		file,
+		dest,
+		Header{
+			mode:     modeRegular | uint32(stat.Mode().Perm()),
+			filesize: uint32(stat.Size()),
+		},
+	)
 }
 
 // Create a symbolic link inside cpio archive
@@ -127,10 +134,7 @@ func (cpio *Archive) mkdir(path string) error {
 	if exists {
 		return nil
 	}
-	header := Header{
-		mode: modeDirectory | 0755,
-	}
-	err := cpio.write(nil, path, header)
+	err := cpio.write(nil, path, Header{mode: modeDirectory | 0755})
 	if err != nil {
 		return err
 	}

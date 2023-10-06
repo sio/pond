@@ -3,10 +3,7 @@ package cpio
 import (
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"io"
-	"io/fs"
-	"os"
 )
 
 // cpio header in new ASCII format
@@ -55,19 +52,4 @@ func (h Header) Write(w io.Writer, path string) error {
 		return err
 	}
 	return nil
-}
-
-func fileHeader(src string) (header Header, err error) {
-	stat, err := os.Stat(src)
-	if err != nil {
-		return header, err
-	}
-	if !stat.Mode().IsRegular() && (stat.Mode()&fs.ModeType != fs.ModeSymlink) {
-		return header, fmt.Errorf("not a regular file: %s (%s)", src, stat.Mode())
-	}
-	header = Header{
-		filesize: uint32(stat.Size()),
-		mode:     modeRegular | uint32(stat.Mode().Perm()),
-	}
-	return header, nil
 }
