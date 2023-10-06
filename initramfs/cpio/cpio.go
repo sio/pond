@@ -37,7 +37,7 @@ type Archive struct {
 	writer   io.Writer
 	writerMu sync.Mutex
 	dirs     map[string]struct{}
-	dirsMu   sync.Mutex
+	dirsMu   sync.RWMutex
 	inode    uint32
 }
 
@@ -46,15 +46,6 @@ func (cpio *Archive) Copy(src, dest string) error {
 	header, err := fileHeader(src)
 	if err != nil {
 		return err
-	}
-	dest = filepath.ToSlash(filepath.Clean(dest))
-	elements := strings.Split(dest, pathSeparator)
-	for i := 1; i < len(elements); i++ {
-		dir := strings.Join(elements[:i], pathSeparator)
-		err = cpio.mkdir(dir)
-		if err != nil {
-			return fmt.Errorf("creating directory %s: %w", dir, err)
-		}
 	}
 	file, err := os.Open(src)
 	if err != nil {
@@ -87,12 +78,21 @@ func (cpio *Archive) write(data io.Reader, path string, header Header) error {
 	if path[:1] == pathSeparator {
 		return errors.New("absolute paths in archive are not supported")
 	}
+	path = filepath.ToSlash(filepath.Clean(path))
+	elements := strings.Split(path, pathSeparator)
+	for i := 1; i < len(elements); i++ {
+		dir := strings.Join(elements[:i], pathSeparator)
+		err := cpio.mkdir(dir)
+		if err != nil {
+			return fmt.Errorf("creating directory %s: %w", dir, err)
+		}
+	}
+
 	cpio.writerMu.Lock()
 	defer cpio.writerMu.Unlock()
 
 	header.inode = cpio.inode
 	cpio.inode++
-
 	err := header.Write(cpio.writer, path)
 	if err != nil {
 		return err
@@ -121,9 +121,10 @@ func (cpio *Archive) write(data io.Reader, path string, header Header) error {
 }
 
 func (cpio *Archive) mkdir(path string) error {
-	cpio.dirsMu.Lock()
-	defer cpio.dirsMu.Unlock()
-	if _, exists := cpio.dirs[path]; exists {
+	cpio.dirsMu.RLock()
+	_, exists := cpio.dirs[path]
+	cpio.dirsMu.RUnlock()
+	if exists {
 		return nil
 	}
 	header := Header{
@@ -133,7 +134,9 @@ func (cpio *Archive) mkdir(path string) error {
 	if err != nil {
 		return err
 	}
+	cpio.dirsMu.Lock()
 	cpio.dirs[path] = struct{}{}
+	cpio.dirsMu.Unlock()
 	return nil
 }
 
