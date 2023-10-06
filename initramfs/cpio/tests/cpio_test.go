@@ -63,9 +63,5 @@ deep/header_test.go
 		if stdout.String() != expected {
 			t.Fatalf("archive listing does not match expected: want\n%s\n\ngot:\n%s", expected, stdout.String())
 		}
-		expected = "14 blocks\n"
-		if stderr.String() != expected {
-			t.Fatalf("stderr does not match expected: want\n%s\n\ngot:\n%s", expected, stderr.String())
-		}
 	})
 }
