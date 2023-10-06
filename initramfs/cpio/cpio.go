@@ -114,7 +114,7 @@ func (cpio *Archive) mkdir(path string) error {
 		return nil
 	}
 	header := Header{
-		mode: modeDirectory | 0777,
+		mode: modeDirectory | 0755,
 	}
 	err := cpio.write(nil, path, header)
 	if err != nil {
