@@ -4,7 +4,9 @@ import (
 	"github.com/sio/pond/initramfs/cpio"
 	"testing"
 
+	"bytes"
 	"os"
+	"os/exec"
 )
 
 func TestCreateCpio(t *testing.T) {
@@ -38,5 +40,32 @@ func TestCreateCpio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("temp: close: %v", err)
 	}
-	t.Logf("archive created: %s", temp.Name())
+
+	t.Run("verify", func(t *testing.T) {
+		cmd := exec.Command("cpio", "-itF", temp.Name())
+		if cmd.Err != nil {
+			t.Skipf("cpio tool not available: %v", cmd.Err)
+		}
+		cmd.Env = append(os.Environ(), "LC_ALL=C")
+		stdout, stderr := new(bytes.Buffer), new(bytes.Buffer)
+		cmd.Stdout, cmd.Stderr = stdout, stderr
+		err = cmd.Run()
+		if err != nil {
+			t.Fatal(err)
+		}
+		expected := `deep
+deep/nested
+deep/nested/path
+deep/nested/path/cpio.go
+header.go
+deep/header_test.go
+`
+		if stdout.String() != expected {
+			t.Fatalf("archive listing does not match expected: want\n%s\n\ngot:\n%s", expected, stdout.String())
+		}
+		expected = "14 blocks\n"
+		if stderr.String() != expected {
+			t.Fatalf("stderr does not match expected: want\n%s\n\ngot:\n%s", expected, stderr.String())
+		}
+	})
 }
