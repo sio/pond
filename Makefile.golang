@@ -157,7 +157,7 @@ import-tree:  ## print import tree in Graphviz dot format
 
 .PHONY: help
 help:  ## show help message
-	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST))
+	@awk "$$HELP_AWK" $(MAKEFILE_LIST)
 
 define HELP_AWK
 BEGIN {
@@ -165,7 +165,7 @@ BEGIN {
 	print("Available targets:");
 }
 /  ##/ {
-	if (stop) exit;
+	if (!match($$0, /:/)) next;
 
 	match($$0, /^[^:]+:/);
 	target = substr($$0, RSTART, RLENGTH-1);
@@ -176,9 +176,6 @@ BEGIN {
 	help = substr($$0, RSTART + RLENGTH);
 
 	printf("  %-*s %s\n", width+1, target, help);
-}
-/HELP_AWK/ {
-	stop = 1;
 }
 endef
 export HELP_AWK
