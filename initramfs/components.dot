@@ -1,0 +1,16 @@
+// Online renderer: https://graphviz.christine.website/
+
+strict digraph initramfs {
+    nbdclient -> "mount rootfs" -> switch_root
+    "machine key" -> nbdclient
+    "machine key" -> secretd
+    dhcpc -> ifup -> secretd -> "boot menu" -> "nbd discovery" -> nbdclient
+    ifup -> "nbd discovery"
+    ifup -> nbdclient
+    modprobe -> lsblk -> "btrfs.ko" -> nbdclient
+    modprobe -> "net/**.ko" -> dhcpc
+    mount [label="mount /dev, /sys, /proc"]
+    mount -> modprobe
+    mount -> nbdclient
+    mount -> "machine key"
+}
