@@ -14,3 +14,6 @@ See [components.dot](components.dot) for an overview of what our initramfs does.
   the dirty work for us.
 - Many goroutines will be waiting for a dependency stage to finish: use Go
   channels (closed = done; open = waiting; map[stage]chan with locking)
+- Use a mutex when writing to stdout: do not output log messages when an
+  interactive menu is in use. Save logs to bytes.Buffer to unblock callers
+  immediately, and flush to stdout after user closes the menu.
