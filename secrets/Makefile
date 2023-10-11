@@ -42,7 +42,7 @@ git-config:
 
 
 .PHONY: manual-test-prepare
-manual-test-prepare:
+manual-test-prepare: build
 	chmod go-rwx tests/keys/*
 	ssh-add tests/keys/master tests/keys/alice tests/keys/bob
 	bin/secretctl$(BIN_SUFFIX) init tests/keys/master.pub
