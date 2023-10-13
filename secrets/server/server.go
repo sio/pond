@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -93,17 +94,13 @@ func New(listen, repository string) (*Server, error) {
 			}, nil
 		},
 	}
-	cert, err := ephemeralHostCert(s.master)
-	if err != nil {
-		return nil, err
-	}
-	s.ssh.AddHostKey(cert) // TODO: renew certificate in background when it's close to expiration
 	return s, nil
 }
 
 type Server struct {
 	proto, addr string
 	ssh         *ssh.ServerConfig
+	sshMu       sync.RWMutex
 	acl         *access.ACL
 	repo        *repo.Repository
 	master      *master.Key
@@ -115,6 +112,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	go s.renewHostCert(ctx)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
@@ -171,7 +169,9 @@ func (s *Server) handleTCP(ctx context.Context, tcp net.Conn) {
 		return
 	}
 
+	s.sshMu.RLock()
 	conn, chans, reqs, err := ssh.NewServerConn(tcp, s.ssh)
+	s.sshMu.RUnlock()
 	if err != nil {
 		s.log("%s: deny connection: %v", tcp.RemoteAddr(), err)
 		return
