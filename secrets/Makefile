@@ -50,6 +50,8 @@ manual-test-prepare: build
 	bin/secretctl$(BIN_SUFFIX) cert --user=bob --key=tests/keys/bob.pub -rw /users
 	bin/secretctl$(BIN_SUFFIX) set /users/domain users.domain.tld
 	bin/secretctl$(BIN_SUFFIX) set /domain top.domain.tld
+	bin/secretctl$(BIN_SUFFIX) set /foo foo-value
+	bin/secretctl$(BIN_SUFFIX) set /users/bar bar-value
 
 .PHONY: bench-stress
 bench-stress: SECRETD_BENCH_SERVER?=tcp://localhost:20002

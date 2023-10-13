@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 func BenchmarkServerReply(b *testing.B) {
@@ -79,7 +80,7 @@ func BenchmarkServerReply(b *testing.B) {
 			b.Fatalf("session error: %v", err)
 		}
 		var r = new(reply)
-		err = json.NewDecoder(stdout).Decode(r)
+		err = json.Unmarshal(stdout.Bytes(), r)
 		if err != nil {
 			b.Fatalf("json reply: %v", err)
 		}
@@ -117,7 +118,12 @@ func BenchmarkServerReply(b *testing.B) {
 		}()
 	}
 	for i := 0; i < b.N; i++ {
-		next <- true // blocks until one of previous jobs is finished
+		select {
+		case next <- true:
+			// block until one of previous jobs is finished
+		case <-time.After(5 * time.Second):
+			b.Fatal("benchmark likely deadlocked")
+		}
 	}
 	close(next)
 	wg.Wait()
