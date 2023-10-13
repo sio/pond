@@ -115,23 +115,24 @@ func (acl *ACL) loadCerts(paths []string, admin bool) (warn []error, err error) 
 	if err != nil {
 		return warn, fmt.Errorf("sql delete: %w", err)
 	}
-	for path, cert := range certs {
+	for filename, cert := range certs {
 		fingerprint := ssh.FingerprintSHA256(cert.PublicKey())
-		for _, p := range cert.Paths() {
-			if p[len(p)-1] != '/' {
-				p += "/"
+		for priority, path := range cert.Paths() {
+			if path[len(path)-1] != '/' {
+				path += "/"
 			}
 			for _, c := range cert.Capabilities() {
 				_, err = tx.Exec(
-					"INSERT INTO ACL(Fingerprint, Capability, Path, ValidAfter, ValidBefore) VALUES (?, ?, ?, ?, ?)",
+					"INSERT INTO ACL(Fingerprint, Capability, Path, Priority, ValidAfter, ValidBefore) VALUES (?, ?, ?, ?, ?, ?)",
 					fingerprint,
 					caps[c],
-					p,
+					path,
+					priority,
 					cert.ValidAfter(),
 					cert.ValidBefore(),
 				)
 				if err != nil {
-					return warn, fmt.Errorf("sql insert: %w: %s: %s [%s]", err, path, p, c)
+					return warn, fmt.Errorf("sql insert: %w: %s: %s [%s]", err, filename, path, c)
 				}
 			}
 		}
@@ -189,6 +190,31 @@ func (acl *ACL) Check(key ssh.PublicKey, c Capability, dir string) error {
 		return ErrPermissionDenied
 	}
 	return nil
+}
+
+// List all paths allowed for reading, ordered by priority
+// (most prefered ones first)
+func (acl *ACL) AllowedRead(key ssh.PublicKey) []string {
+	const query = `
+		SELECT DISTINCT Path
+		FROM ValidACL
+		WHERE Fingerprint = ? AND Capability = ?
+		ORDER BY ValidAfter DESC, Priority ASC
+	`
+	rows, err := acl.db.Query(query, ssh.FingerprintSHA256(key), caps[Read])
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = rows.Close() }()
+	var paths []string
+	for rows.Next() {
+		var path string
+		if rows.Scan(&path) != nil {
+			continue
+		}
+		paths = append(paths, path)
+	}
+	return paths
 }
 
 // Dump ACL database for debugging

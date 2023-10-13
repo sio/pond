@@ -23,9 +23,21 @@ func (s *Server) handleAPI(ctx context.Context, key ssh.PublicKey, request io.Re
 	}
 	if len(query) == 0 {
 		resp.Errorf("empty query")
+		return resp
 	}
-	for _, n := range query {
-		resp.Set(n, "dummy value") // TODO: stub
+	allowed := s.acl.AllowedRead(key)
+	for _, key := range query {
+		value, err := s.repo.Search(string(key), allowed)
+		if err != nil {
+			resp.Errorf("%s: %v", key, err)
+			continue
+		}
+		plaintext, err := value.Decrypt(s.master)
+		if err != nil {
+			resp.Errorf("%s: %v", key, err)
+			continue
+		}
+		resp.Set(key, secret(plaintext))
 	}
 	return resp
 }

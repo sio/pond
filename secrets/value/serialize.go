@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -20,6 +21,20 @@ const (
 	blobDelimiter    = "---"
 	blobLineWidth    = 72
 )
+
+func Load(filename string) (*Value, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	v := new(Value)
+	err = v.Deserialize(file)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
 
 func (v *Value) Serialize(out io.Writer) error {
 	err := v.Verify()
