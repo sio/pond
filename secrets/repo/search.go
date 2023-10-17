@@ -23,10 +23,10 @@ outer:
 		dir = filepath.Clean(dir)
 		tail := "initial value"
 		var level uint
-		for len(tail) > 0 {
+		for len(tail) > 0 && (found == "" || level < foundLevel) {
 			path := filepath.Join(r.root, secretsDir, dir, what)
 			_, err := os.Stat(path)
-			if err == nil && (found == "" || level < foundLevel) {
+			if err == nil {
 				found = path
 				foundLevel = level
 				if level == 0 { // no need to search further if we have an exact match
