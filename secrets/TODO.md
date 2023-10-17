@@ -25,6 +25,7 @@
     - Set deadline
     - Use CancelFunc
 - Provide tools to rekey all secrets and certificates to a new master key
+- SSH server hardening: <https://github.com/jtesta/ssh-audit>
 
 
 ## Lowest priority: maybe sometime (if ever)
