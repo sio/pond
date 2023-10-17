@@ -48,9 +48,14 @@ fmt:  ## format Go code
 	$(GO) fmt $(EVERYTHING)
 	"$(shell $(GO) env GOROOT)/bin/gofmt" -l -w .
 
-go.sum:
+go.sum: go.mod
 	$(GO) mod tidy
-	touch $@
+	@touch $@
+
+.PHONY: update
+update:  ## update Go packages this project depends on
+	$(GO) get -u all
+	@touch go.mod
 
 .PHONY: ci
 ci:  ## run continuous integration checks
