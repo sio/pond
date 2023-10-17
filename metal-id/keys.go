@@ -4,12 +4,11 @@ import (
 	"crypto"
 	"encoding/pem"
 
-	"github.com/caarlos0/sshmarshal" // PR pending: https://github.com/golang/go/issues/37132
 	"golang.org/x/crypto/ssh"
 )
 
 func EncodePrivateKey(key crypto.PrivateKey) ([]byte, error) {
-	block, err := sshmarshal.MarshalPrivateKey(key, "")
+	block, err := ssh.MarshalPrivateKey(key, "")
 	if err != nil {
 		return nil, err
 	}
