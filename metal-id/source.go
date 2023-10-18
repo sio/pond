@@ -15,6 +15,7 @@ func Sources() []*annotatedDataSource {
 		{"USB devices", &UsbDeviceData{}},
 		{"DMI table", &DMIData{}},
 		{"Block devices", &BlockDeviceData{}},
+		{"CPU information", &CpuData{}},
 	}
 }
 
