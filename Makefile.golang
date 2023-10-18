@@ -124,6 +124,13 @@ $(CLOC):
 loc: $(CLOC)  ## count lines of code
 	$(CLOC) .
 
+.PHONY: upx
+UPX_TOOL?=upx
+UPX?=--best --lzma
+export UPX
+upx: build  ## compress executables with upx
+	$(UPX_TOOL) $(EXE)
+
 GOMODULE=$(shell awk '/^[^[:alnum:]]*module[^[:alnum:]]/ { print $$2; exit; }' go.mod)
 define import_tree_awk
 BEGIN {
