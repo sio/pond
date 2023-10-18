@@ -86,7 +86,4 @@ func (d *abstractDataSource) sort() {
 		d.chunks,
 		func(i, j int) bool { return bytes.Compare(d.chunks[i], d.chunks[j]) < 0 },
 	)
-	if len(d.chunks) == 0 {
-		d.index = 0xEE // any number greater than zero will stop iteration
-	}
 }
