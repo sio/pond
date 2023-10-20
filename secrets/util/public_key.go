@@ -43,8 +43,16 @@ func LoadCertificate(path string) (*ssh.Certificate, error) {
 
 // Check if two ssh keys are the same
 func EqualSSH(a, b ssh.PublicKey) bool {
+	// Checking if a and b point to the same struct (&a == &b) does not speed
+	// things up.  If anything, it might even slow comparison down by ~20ns (or
+	// may be that was just random jitter, run BenchmarkPubkeyEqual yourself).
 	if a.Type() != b.Type() {
 		return false
 	}
-	return bytes.Equal(a.Marshal(), b.Marshal()) // TODO: key comments are not stripped and may result in false negative
+	// Calculating SHA256 fingerprint strings for comparison is twice as slow
+	// as comparing raw byte slices, and on top of that prone to hash collisions.
+	//
+	// Key comments are not part of ssh.PublicKey structs and will not affect
+	// Marshal() equality comparison.
+	return bytes.Equal(a.Marshal(), b.Marshal())
 }
