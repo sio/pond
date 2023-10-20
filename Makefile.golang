@@ -133,6 +133,13 @@ ifneq ($(strip $(EXE)),)
 	$(UPX_TOOL) $(EXE)
 endif
 
+.PHONY: clean
+CLEAN+=$(EXE)
+clean:  ## remove build artifacts
+ifneq ($(strip $(CLEAN)),)
+	$(RM) -r $(CLEAN)
+endif
+
 GOMODULE=$(shell awk '/^[^[:alnum:]]*module[^[:alnum:]]/ { print $$2; exit; }' go.mod)
 define import_tree_awk
 BEGIN {
