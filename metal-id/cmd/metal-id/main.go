@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 func main() {
@@ -19,13 +20,15 @@ func main() {
 	}
 
 	// Parse CLI arguments
-	verbose := flag.Bool("v", false, "print some information about fingerprint data (safe)")
-	unsafe := flag.Bool("debug-unsafe", false, "do not obfuscate fingerprint data (unsafe)")
-	dest := flag.String("f", "", `private key destination path`)
+	verbose := flag.Bool("verbose", false, "print some information about fingerprint data (safe)")
+	unsafe := flag.Bool("unsafe", false, "print non-obfuscated debug information (unsafe)")
+	dest := flag.String("output", "", `private key destination path`)
+	paranoid := flag.Bool("paranoid", false, "use extra paranoid data sources for fingerprinting")
 	flag.Parse()
+	var err error
 	if len(*dest) > 0 {
 		dir := filepath.Dir(*dest)
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if _, err = os.Stat(dir); os.IsNotExist(err) {
 			fail("Destination directory does not exist: %s", dir)
 		}
 	}
@@ -40,14 +43,33 @@ func main() {
 	}
 
 	// Derive key from hardware fingerprint
+	var src = metal_id.Sources()
+	if *paranoid {
+		for name, datasource := range metal_id.SourcesParanoid() {
+			src[name] = datasource
+		}
+	}
+	var names = make([]string, len(src))
+	var i int
+	for name := range src {
+		names[i] = name
+		i++
+	}
+	sort.Strings(names)
 	var hwid = metal_id.New()
-	var err error
-	for _, data := range metal_id.Sources() {
-		debug("Reading %s", data.Name)
+	for _, name := range names {
+		debug("Reading %s", name)
+		data := src[name]
 		for {
 			chunk := data.Next()
-			if len(chunk) == 0 {
+			if data.Err() != nil {
+				fail("Fetching data: %v", data.Err())
+			}
+			if chunk == nil {
 				break
+			}
+			if len(chunk) == 0 {
+				continue
 			}
 			debug("  %s", previewSeed(chunk, *unsafe))
 			_, err = hwid.Write(chunk)
@@ -56,6 +78,7 @@ func main() {
 			}
 		}
 	}
+
 	var key crypto.Signer
 	key, err = hwid.Key()
 	if err != nil {
