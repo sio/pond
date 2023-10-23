@@ -10,7 +10,7 @@ import (
 )
 
 func TestInitialization(t *testing.T) {
-	id := metal_id.New()
+	id := metal_id.New(nil, nil)
 	_, err := id.Key()
 	if err == nil {
 		t.Fatalf("Empty MetalID must not be able to derive keys")

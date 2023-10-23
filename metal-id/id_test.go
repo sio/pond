@@ -13,13 +13,13 @@ func TestKeyDerivation(t *testing.T) {
 		key crypto.Signer
 		err error
 	)
-	id = New()
+	id = New(nil, nil)
 	for id.count < dataPointMinCount {
 		_, err = id.Key()
 		if err == nil {
 			t.Fatalf("produced a key from %d data points instead of %d", id.count, dataPointMinCount)
 		}
-		_, err = id.Write(bytes.Repeat([]byte{0x10}, dataPointMinBytes))
+		_, err = id.write(bytes.Repeat([]byte{0x10}, dataPointMinBytes))
 		if err != nil {
 			t.Fatalf("failed to write data to fingerprinter: %v", err)
 		}

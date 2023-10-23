@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"sort"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -19,7 +20,7 @@ const (
 )
 
 // Initialize new MetalID
-func New() *MetalID {
+func New(debug func(f string, a ...any), sensitive func(d []byte) string) *MetalID {
 	h := sha512.New()
 	_, err := h.Write(
 		bytes.Repeat(
@@ -31,7 +32,9 @@ func New() *MetalID {
 		panic("failed to initialize MetalID hash with version header")
 	}
 	return &MetalID{
-		hash: h,
+		hash:          h,
+		debugFunc:     debug,
+		sensitiveFunc: sensitive,
 	}
 }
 
@@ -41,10 +44,16 @@ type MetalID struct {
 
 	// Number of data points which were fed to hasher
 	count uint
+
+	// Debug logger
+	debugFunc func(format string, args ...any)
+
+	// Format sensitive values for viewing
+	sensitiveFunc func(d []byte) string
 }
 
 // Feed data to fingerprint function
-func (id *MetalID) Write(p []byte) (n int, err error) {
+func (id *MetalID) write(p []byte) (n int, err error) {
 	n, err = id.hash.Write(p)
 	if n >= dataPointMinBytes && err == nil {
 		id.count++
@@ -73,4 +82,53 @@ func (id *MetalID) Key() (crypto.Signer, error) {
 	salt := sha512.Sum512(fingerprint)
 	seed := argon2.IDKey(fingerprint, salt[:], 4, 256*1024, 2, ed25519.SeedSize)
 	return ed25519.NewKeyFromSeed(seed), nil
+}
+
+// Fetch datasources and generate hardware fingerprint
+func (id *MetalID) Fetch(src map[string]DataSource) error {
+	var names = make([]string, len(src))
+	var i int
+	for name := range src {
+		names[i] = name
+		i++
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		id.debug("Reading %s", name)
+		data := src[name]
+		for {
+			chunk := data.Next()
+			if data.Err() != nil {
+				return fmt.Errorf("reading %s: %w", name, data.Err())
+			}
+			if chunk == nil {
+				break
+			}
+			if len(chunk) == 0 {
+				continue
+			}
+			id.debug("  %s", id.sensitive(chunk))
+			_, err := id.write(chunk)
+			if err != nil {
+				return fmt.Errorf("adding %s: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+// Print debug information
+func (id *MetalID) debug(format string, args ...any) {
+	if id.debugFunc == nil {
+		return
+	}
+	id.debugFunc(format, args...)
+}
+
+// Format sensitive information for viewing
+func (id *MetalID) sensitive(d []byte) string {
+	if id.sensitiveFunc == nil {
+		return "(sensitive)"
+	}
+	return id.sensitiveFunc(d)
 }

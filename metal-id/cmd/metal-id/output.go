@@ -7,27 +7,29 @@ import (
 	"unicode"
 )
 
-func previewSeed(data []byte, unsafe bool) string {
-	const (
-		maxPreviewLength  = 80 - 8 - 10
-		nonPrintableByte  = '.'
-		safePrintableByte = 'x'
-	)
-	var builder strings.Builder
-	for index, b := range data {
-		if index > maxPreviewLength {
-			break
+func previewSeed(unsafe bool) func(data []byte) string {
+	return func(data []byte) string {
+		const (
+			maxPreviewLength  = 80 - 8 - 10
+			nonPrintableByte  = '.'
+			safePrintableByte = 'x'
+		)
+		var builder strings.Builder
+		for index, b := range data {
+			if index > maxPreviewLength {
+				break
+			}
+			var char = rune(b)
+			if !unicode.IsPrint(char) {
+				char = nonPrintableByte
+			} else if !unsafe {
+				char = safePrintableByte
+			}
+			builder.WriteRune(char)
 		}
-		var char = rune(b)
-		if !unicode.IsPrint(char) {
-			char = nonPrintableByte
-		} else if !unsafe {
-			char = safePrintableByte
-		}
-		builder.WriteRune(char)
+		builder.WriteString(fmt.Sprintf(" [%d bytes]", len(data)))
+		return builder.String()
 	}
-	builder.WriteString(fmt.Sprintf(" [%d bytes]", len(data)))
-	return builder.String()
 }
 
 func stderr(format string, a ...any) {

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 )
 
 func main() {
@@ -49,36 +48,11 @@ func main() {
 			src[name] = datasource
 		}
 	}
-	var names = make([]string, len(src))
-	var i int
-	for name := range src {
-		names[i] = name
-		i++
+	var hwid = metal_id.New(debug, previewSeed(*unsafe))
+	err = hwid.Fetch(src)
+	if err != nil {
+		fail("Error: %v", err)
 	}
-	sort.Strings(names)
-	var hwid = metal_id.New()
-	for _, name := range names {
-		debug("Reading %s", name)
-		data := src[name]
-		for {
-			chunk := data.Next()
-			if data.Err() != nil {
-				fail("Fetching data: %v", data.Err())
-			}
-			if chunk == nil {
-				break
-			}
-			if len(chunk) == 0 {
-				continue
-			}
-			debug("  %s", previewSeed(chunk, *unsafe))
-			_, err = hwid.Write(chunk)
-			if err != nil {
-				fail("Failed to add data to fingerprint: %v", err)
-			}
-		}
-	}
-
 	var key crypto.Signer
 	key, err = hwid.Key()
 	if err != nil {
