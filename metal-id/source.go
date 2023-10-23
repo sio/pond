@@ -27,7 +27,9 @@ func Sources() map[string]DataSource {
 // These data sources may fail loudly via returning non-nil .Err() at their
 // discretion
 func SourcesParanoid() map[string]DataSource {
-	return map[string]DataSource{}
+	src := Sources()
+	src["Default gateway"] = new(GatewayData)
+	return src
 }
 
 // Data source provides hardware based inputs for MetalID to uniquely
