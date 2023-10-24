@@ -17,6 +17,7 @@ GOARCH:=$(shell $(GO) env GOARCH)
 GOEXE:=$(shell $(GO) env GOEXE)
 GOOS:=$(shell $(GO) env GOOS)
 GOPATH:=$(shell $(GO) env GOPATH)
+GOROOT:=$(shell $(GO) env GOROOT)
 
 LDD_CHECK=;
 ifdef GOBUILD_MUST_STATIC
@@ -46,7 +47,7 @@ build-all:  ## build all OS/architectures
 .PHONY: fmt
 fmt:  ## format Go code
 	$(GO) fmt $(EVERYTHING)
-	"$(shell $(GO) env GOROOT)/bin/gofmt" -l -w .
+	"$(GOROOT)/bin/gofmt" -l -w .
 
 go.sum: go.mod
 	$(GO) mod tidy
@@ -93,8 +94,8 @@ $(ERRCHECK):
 .PHONY: lint
 lint: $(STATICCHECK) $(ERRCHECK)
 lint:  ## run linters
-	"$(shell $(GO) env GOROOT)/bin/gofmt" -d .
-	@test -z "$$("$(shell $(GO) env GOROOT)/bin/gofmt" -l .)"
+	"$(GOROOT)/bin/gofmt" -d .
+	@test -z "$$("$(GOROOT)/bin/gofmt" -l .)"
 	$(GO) vet $(EVERYTHING)
 	$(STATICCHECK) $(EVERYTHING)
 	$(ERRCHECK) $(EVERYTHING)
