@@ -10,6 +10,9 @@ import (
 	"strings"
 )
 
+// Monitor MAC address of default gateway for changes
+//
+// Related to: https://notes.valdikss.org.ru/jabber.ru-mitm/
 type GatewayData struct {
 	abstractDataSource
 }
