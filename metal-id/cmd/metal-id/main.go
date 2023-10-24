@@ -42,11 +42,9 @@ func main() {
 	}
 
 	// Derive key from hardware fingerprint
-	var src = metal_id.Sources()
+	src := metal_id.Sources()
 	if *paranoid {
-		for name, datasource := range metal_id.SourcesParanoid() {
-			src[name] = datasource
-		}
+		src = metal_id.SourcesParanoid()
 	}
 	var hwid = metal_id.New(debug, previewSeed(*unsafe))
 	err = hwid.Fetch(src)
