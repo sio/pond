@@ -42,3 +42,9 @@
 - VM disks are stored on NAS
 - VMs are created from Debian cloud images with one-time CM tool (cloud-init)
 - Scheduled VM maintenance: upgrades, patching **=???**
+
+## TODO: Bringup demo with diskless VM
+
+- Craft a short qemu-kvm command line: no disks, point to prebaked ipxe.bin
+- Prepare secrets account for the resulting machine-id key
+- Boot full Linux OS with some tools installed
