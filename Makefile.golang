@@ -26,9 +26,11 @@ endif
 
 .PHONY: build
 build: $(EXE)  ## compile all binaries
+	sha256sum $(EXE)
 $(EXE): $(shell find . -type f -iname '*.go') go.sum
 	$(GO) build $(GOBUILD_ARGS) -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
-	! ldd $@ $(LDD_CHECK) file $@
+	@echo ldd $@
+	@! ldd $@ $(LDD_CHECK) file $@
 
 .PHONY: $(RUNNERS)
 RUNNERS=$(patsubst %,run-%,$(APPS))
