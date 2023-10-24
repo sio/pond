@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha512"
 	"fmt"
 	"os"
 	"strings"
@@ -27,7 +28,7 @@ func previewSeed(unsafe bool) func(data []byte) string {
 			}
 			builder.WriteRune(char)
 		}
-		builder.WriteString(fmt.Sprintf(" [%d bytes]", len(data)))
+		builder.WriteString(fmt.Sprintf(" [len=%d,check=%d]", len(data), sha512.Sum512(data)[0]))
 		return builder.String()
 	}
 }
