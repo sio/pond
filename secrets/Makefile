@@ -2,7 +2,7 @@
 
 
 # https://www.arp242.net/static-go.html
-GOBUILD_ARGS=-tags netgo,osusergo,sqlite_omit_load_extension -ldflags="-extldflags=-static -s -w"
+GOBUILD_ARGS+=-tags netgo,osusergo,sqlite_omit_load_extension -ldflags="-extldflags=-static -s -w"
 GOBUILD_MUST_STATIC?=yes
 
 
