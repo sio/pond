@@ -23,3 +23,9 @@ jobs:
             golang-${{ runner.os }}-all-subprojects
             golang-${{ runner.os }}
       - run: make ci
+      - uses: actions/upload-artifact@v3
+        with:
+          name: executables
+          retention-days: 1
+          path: |
+            ./**/bin/*
