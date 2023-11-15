@@ -26,14 +26,15 @@ endif
 
 .PHONY: build
 build: $(EXE)  ## compile all binaries
-ifneq (,$(strip $(EXE)))
-	sha256sum $(EXE)
-endif
 
 $(EXE): $(shell find . -type f -iname '*.go') go.sum
 	$(GO) build $(GOBUILD_ARGS) -o $@ ./cmd/$(subst $(BIN_SUFFIX),,$(notdir $@))
 	@echo ldd $@
-	@! ldd $@ $(LDD_CHECK) file $@
+	@! ldd $@ $(LDD_CHECK) true
+	@echo Reproducibility information:
+	@file $@
+	@grep -aoP '\bgo1\.\d+\.?\d*\b|(?<=COMPILER=)[\w\.-]+|GCC:[^\0]+' $@ | sort -ru
+	sha256sum $@
 
 .PHONY: $(RUNNERS)
 RUNNERS=$(patsubst %,run-%,$(APPS))
