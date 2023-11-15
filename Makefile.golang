@@ -34,6 +34,7 @@ $(EXE): $(shell find . -type f -iname '*.go') go.sum
 	@echo Reproducibility information:
 	@file $@
 	@grep -aoP '\bgo1\.\d+\.?\d*\b|(?<=COMPILER=)[\w\.-]+|GCC:[^\0]+' $@ | sort -ru
+	@grep -aoP 'build\t.*\b' $@ | sort -u
 	sha256sum $@
 
 .PHONY: $(RUNNERS)
