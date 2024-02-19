@@ -1,7 +1,3 @@
-// Proof of concept: create a minimal initramfs in our code
-//
-// This program assumes that statically built busybox is available at
-// /bin/busybox (Debian package: busybox-static).
 package main
 
 import (
@@ -12,8 +8,16 @@ import (
 	"github.com/sio/pond/initramfs/cpio"
 )
 
+var pre = struct {
+	Init   string
+	Output string
+}{
+	Init:   os.Getenv("PRE_INIT"),
+	Output: os.Getenv("PRE_OUTPUT"),
+}
+
 func main() {
-	file, err := os.OpenFile(os.Args[1], os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(pre.Output, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,19 +31,7 @@ func main() {
 		log.Fatal(err)
 	}
 	initramfs := cpio.New(compressor)
-	err = initramfs.Copy("/bin/busybox", "bin/busybox")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = initramfs.Link("/bin/busybox", "bin/sh")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = initramfs.Link("/bin/busybox", "bin/reboot")
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = initramfs.Link("/bin/busybox", "init")
+	err = initramfs.Copy(pre.Init, "init")
 	if err != nil {
 		log.Fatal(err)
 	}

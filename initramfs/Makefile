@@ -12,4 +12,12 @@ boot:  ## launch a diskless virtual machine with custom initramfs
 		-nographic \
 		-no-reboot \
 
+.PHONY: demo
+demo: build
+demo:  ## boot our initramfs in qemu
+	$(MAKE) run-mkinitrd boot \
+		PRE_INIT=$(BIN_DIR)/init$(BIN_SUFFIX) \
+		PRE_OUTPUT=bin/initramfs \
+		INITRD=bin/initramfs
+
 include ../Makefile.golang
