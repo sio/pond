@@ -26,6 +26,10 @@ corrupt.squashfs: ok.squashfs
 	printf CORRUPT | dd of=$@ bs=1 seek=$$((0x8200040)) conv=notrunc # corruption near the end of the last file
 
 
+.PHONY: build
+build: ok.squashfs corrupt.squashfs
+
+
 MOUNTPOINTS=mnt/ok mnt/corrupt
 $(MOUNTPOINTS):
 	mkdir -p $@
@@ -69,3 +73,7 @@ umount:
 .PHONY: clean
 clean: umount
 	git clean -idx
+
+
+.PHONY: ci update upx
+ci update upx:  ## noop, required for `make ci` at repo level
