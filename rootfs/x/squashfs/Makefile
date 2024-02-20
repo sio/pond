@@ -26,26 +26,36 @@ corrupt.squashfs: ok.squashfs
 	printf CORRUPT | dd of=$@ bs=1 seek=$$((0x8200040)) conv=notrunc # corruption near the end of the last file
 
 
+MOUNTPOINTS=mnt/ok mnt/corrupt
+$(MOUNTPOINTS):
+	mkdir -p $@
+
+
 # Mount file systems for inspection.
 # Corrupted image mounts fine because we made sure not to mess with squashfs
 # metadata when simulating corruption.
 .PHONY: mount
-mount: ok.squashfs corrupt.squashfs | umount
-	mkdir -p mnt/ok mnt/corrupt
+mount: ok.squashfs corrupt.squashfs $(MOUNTPOINTS) | umount
 	mount ok.squashfs mnt/ok
 	mount corrupt.squashfs mnt/corrupt
-	diff mnt/ok mnt/corrupt
+	$(MAKE) compare
 
 
 # Mount with data verification
 .PHONY: mount-verity
-mount-verity: ok.squashfs corrupt.squashfs | umount
-	mkdir -p mnt/ok mnt/corrupt
+mount-verity: ok.squashfs corrupt.squashfs $(MOUNTPOINTS) | umount
 	veritysetup open ok.squashfs ok ok.squashfs $(VERITY_HASH) --hash-offset=$(VERITY_OFFSET)
 	veritysetup open corrupt.squashfs corrupt corrupt.squashfs $(VERITY_HASH) --hash-offset=$(VERITY_OFFSET)
 	mount /dev/mapper/ok mnt/ok
 	mount /dev/mapper/corrupt mnt/corrupt
-	diff mnt/ok mnt/corrupt
+	$(MAKE) compare
+
+
+# Compare mounted filesystems
+.PHONY: compare
+compare:
+	-sha256sum $(patsubst %,%/*,$(MOUNTPOINTS)) | sort -t/ -k3 -h
+	diff -s $(MOUNTPOINTS)
 
 
 .PHONY: umount
@@ -54,7 +64,6 @@ umount:
 	-umount mnt/corrupt
 	-veritysetup close ok
 	-veritysetup close corrupt
-	-$(RM) -r mnt
 
 
 .PHONY: clean
