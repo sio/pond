@@ -1,0 +1,4 @@
+*.bin
+*.squashfs
+verity.info
+verity.offset
