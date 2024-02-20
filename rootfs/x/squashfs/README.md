@@ -1,4 +1,4 @@
-# Simulate silent rootfs image corruption and detect in using dm-verity
+# Simulate silent rootfs image corruption and detect it using dm-verity
 
 Squashfs root filesystem images may get corrupted in transit and/or at rest.
 Normally this corruption may go unnoticed for a long time, but with dm-verity
