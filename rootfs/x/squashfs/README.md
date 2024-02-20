@@ -28,3 +28,12 @@ diff: mnt/corrupt/20.bin: Input/output error
                            nothing to compare to original,
                                    the data is gone
 ```
+
+Here is how it looks in dmesg:
+
+```dmesg
+[ 3523.979841] device-mapper: verity: 7:1: data block 33280 is corrupted
+[ 3523.980689] SQUASHFS error: Failed to read block 0x8200060: -5
+[ 3523.981385] SQUASHFS error: Unable to read data cache entry [8200060]
+[ 3523.982211] SQUASHFS error: Unable to read page, block 8200060, size 1020000
+```
