@@ -44,6 +44,9 @@ type Archive struct {
 
 // Copy local file to cpio archive
 func (cpio *Archive) Copy(src, dest string) error {
+	if src == dest && len(dest) > 0 && dest[0] == '/' {
+		dest = dest[1:] // special case for copying absolute path to the same location
+	}
 	file, err := os.Open(src)
 	if err != nil {
 		return err
