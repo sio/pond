@@ -2,17 +2,26 @@ package pre
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 )
 
 func Run() {
-	task := &TaskManager{}
-	go task.Wait("foo", "bar")
-	go task.Wait("baz")
-	for _, name := range []string{"hello", "world", "foo", "bar", "baz", "eh"} {
-		time.Sleep(time.Second / 10)
+	task := NewTaskQueue()
+	go task.PrintResults()
+	wait := func() error {
+		n := time.Duration(rand.Intn(10) + 1)
+		time.Sleep(time.Second * n / 100)
 		fmt.Println(task.Status())
-		task.Done(name)
+		return nil
 	}
-	task.Wait()
+	fail := func() error {
+		return fmt.Errorf("failed")
+	}
+	task.Go("foo", wait)
+	task.Go("bar", wait)
+	task.Go("baz", wait, "foo", "bar")
+	task.Go("Expect failure", fail)
+	task.Wait("baz")
+	fmt.Println(task.Status())
 }
