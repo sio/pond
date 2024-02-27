@@ -61,6 +61,7 @@ func ldsoCache(filename string) (map[string]string, error) {
 	if len(cache) != int(header.Count) {
 		return nil, fmt.Errorf("mismatching entries count: header advertised %d items, got %d", header.Count, len(cache))
 	}
+	delete(cache, "ld-linux-x86-64.so.2") // causes multiple different paths for same library
 	return cache, nil
 }
 

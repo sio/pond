@@ -17,41 +17,67 @@ var arch string
 
 // Return shared object dependencies for an executable at provided path
 func Depends(path string) ([]string, error) {
-	exe, err := elf.Open(path)
+	search := recursive{}
+	err := search.Search(path)
 	if err != nil {
 		return nil, err
 	}
+	var result = make([]string, 0, len(search.found))
+	for dep := range search.found {
+		result = append(result, dep)
+	}
+	return result, nil
+}
+
+type recursive struct {
+	visited map[string]struct{}
+	found   map[string]struct{}
+}
+
+func (s *recursive) Search(path string) error {
+	if s.visited == nil {
+		s.visited = make(map[string]struct{})
+	}
+	if s.found == nil {
+		s.found = make(map[string]struct{})
+	}
+
+	if _, seen := s.visited[path]; seen {
+		return nil
+	}
+	s.visited[path] = struct{}{}
+
+	exe, err := elf.Open(path)
+	if err != nil {
+		return err
+	}
 	defer func() { _ = exe.Close() }()
-	var deps = make(map[string]struct{})
 
 	interp, err := interpreter(exe)
 	if err == nil {
-		deps[interp] = struct{}{}
-		interpDeps, err := Depends(interp)
+		s.found[interp] = struct{}{}
+		err = s.Search(interp)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch indirect dependencies (%s): %w", interp, err)
-		}
-		for _, p := range interpDeps {
-			deps[p] = struct{}{}
+			return fmt.Errorf("%s: %w", interp, err)
 		}
 	}
 
 	libs, err := exe.ImportedLibraries()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("%s: %w", path, err)
 	}
 	for _, lib := range libs {
-		lib, err = library(lib)
+		libpath, err := library(lib)
 		if err != nil {
-			return nil, err
+			return fmt.Errorf("%s: %w", lib, err)
 		}
-		deps[lib] = struct{}{}
+		s.found[libpath] = struct{}{}
+		err = s.Search(libpath)
+		if err != nil {
+			return fmt.Errorf("%s: %w", libpath, err)
+		}
 	}
-	var result = make([]string, 0, len(deps))
-	for dep := range deps {
-		result = append(result, dep)
-	}
-	return result, nil
+	return nil
 }
 
 // Resolve library path by name
@@ -66,15 +92,15 @@ func library(lib string) (path string, err error) {
 	if found {
 		return path, nil
 	}
-	dirs := [...]string{"/lib", "/usr/lib", "/lib64", "/usr/lib64"}
+	dirs := []string{"/lib", "/usr/lib", "/lib64", "/usr/lib64"}
 	gnudir := arch + "-linux-gnu"
+	origLen := len(dirs)
+	for i := 0; i < origLen; i++ {
+		dirs = append(dirs, filepath.Join(dirs[i], gnudir))
+	}
 	for _, dir := range dirs {
 		path := filepath.Join(dir, lib)
 		_, err := os.Stat(path)
-		if err != nil {
-			path = filepath.Join(dir, gnudir, lib)
-			_, err = os.Stat(path)
-		}
 		if err == nil {
 			ldcache.Set(lib, path)
 			return path, nil
