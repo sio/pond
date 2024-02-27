@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/sio/pond/initramfs/pre"
+	"github.com/sio/pond/initramfs/pid1"
 )
 
 func main() {
 	fmt.Println("Hello from custom initramfs!")
-	pre.Run()
+	pid1.Run()
 }

@@ -1,4 +1,4 @@
-package pre
+package pid1
 
 import (
 	"fmt"
@@ -24,4 +24,9 @@ func Run() {
 	task.Go("Expect failure", fail)
 	task.Wait("baz")
 	fmt.Println(task.Status())
+
+	// PID 1 (init process) must never exit, this would lead to kernel panic.
+	// We expect to switch_root into full rootfs eventually.
+	// Deadlock may occur at this stage only if an essential PID 1 task fails.
+	select {}
 }
