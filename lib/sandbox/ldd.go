@@ -8,6 +8,12 @@ import (
 	"regexp"
 )
 
+// This function works by shelling out to `ldd` utility and parsing its output.
+// Not recommended for deployment
+func Ldd(path string) (libs []string, err error) {
+	return ldd(path)
+}
+
 func ldd(path string) (libs []string, err error) {
 	output := new(bytes.Buffer)
 	ldd := exec.Command("ldd", path)
