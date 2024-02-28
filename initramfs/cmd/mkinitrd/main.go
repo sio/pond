@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -22,6 +23,7 @@ var config = struct {
 		"/bin/setsid",
 		"/bin/sh",
 		"/bin/find",
+		"/bin/mkdir",
 	},
 }
 
@@ -40,29 +42,23 @@ func main() {
 		log.Fatal(err)
 	}
 	initramfs := cpio.New(compressor)
-
-	log.Println(config.Init)
-	err = initramfs.Copy(config.Init, "init")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, exe := range config.Exe {
-		log.Println(exe)
-		err = initramfs.Copy(exe, exe)
+	cp := func(src, dest string) {
+		fmt.Printf("%s -> %s\n", src, dest)
+		err = initramfs.Copy(src, dest)
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	cp(config.Init, "init")
+	for _, exe := range config.Exe {
+		cp(exe, exe)
 		deps, err := ldd.Depends(exe)
 		if err != nil {
 			log.Fatal(err)
 		}
 		for _, lib := range deps {
-			log.Println(lib)
-			err = initramfs.Copy(lib, lib)
-			if err != nil {
-				log.Fatal(err)
-			}
+			cp(lib, lib)
 		}
 	}
 	err = initramfs.Close()
