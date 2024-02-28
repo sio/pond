@@ -15,8 +15,8 @@ var config = struct {
 	Output string
 	Exe    []string
 }{
-	Init:   os.Getenv("PRE_INIT"),
-	Output: os.Getenv("PRE_OUTPUT"),
+	Init:   os.Getenv("INIT"),
+	Output: os.Getenv("INITRD"),
 	Exe: []string{
 		"/bin/ls",
 		"/bin/mount",
