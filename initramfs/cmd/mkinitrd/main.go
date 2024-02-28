@@ -32,7 +32,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 	err = file.Truncate(0)
 	if err != nil {
 		log.Fatal(err)
