@@ -3,11 +3,12 @@ KERNEL?=/boot/vmlinuz-$(shell uname -r)
 INITRD?=/boot/initrd.img-$(shell uname -r)
 
 .PHONY: boot
+PANIC?=panic=-1
 boot:  ## launch a diskless virtual machine with custom initramfs
 	$(KVM) \
 		-kernel $(KERNEL) \
 		-initrd $(INITRD) \
-		-append "console=tty0 console=ttyS0,115200 noquiet panic=-1" \
+		-append "console=tty0 console=ttyS0,115200 noquiet $(PANIC)" \
 		-m 1G \
 		-nographic \
 		-no-reboot \
