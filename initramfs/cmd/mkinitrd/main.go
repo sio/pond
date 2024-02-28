@@ -24,6 +24,7 @@ var config = struct {
 		"/bin/sh",
 		"/bin/find",
 		"/bin/mkdir",
+		"/bin/cat",
 	},
 }
 

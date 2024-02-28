@@ -34,7 +34,11 @@ func Run() {
 	fmt.Println(task.Status())
 
 	// TODO: remove temporary shell from initramfs
-	err := syscall.Exec("/bin/sh", []string{"sh"}, nil)
+	err := syscall.Exec(
+		"/bin/setsid",
+		[]string{"setsid", "sh", "-c", "exec sh </dev/ttyS0 >/dev/ttyS0 2>&1"},
+		nil,
+	)
 	if err != nil {
 		panic(err)
 	}
