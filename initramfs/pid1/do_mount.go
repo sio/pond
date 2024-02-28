@@ -6,14 +6,22 @@ import (
 	"syscall"
 )
 
+// Mount /dev, /sys, /proc filesystems
 func mountDevSysProc() error {
-	//for _, m := range []struct{
-	//	source string,
-	//	target string,
-	//	fstype string,
-	//}{
-	//	{"
-	//}
+	for _, m := range []struct {
+		source string
+		target string
+		fstype string
+	}{
+		{"none", "/proc", "proc"},
+		{"none", "/sys", "sysfs"},
+		{"none", "/dev", "devtmpfs"},
+	} {
+		err := mount(m.source, m.target, m.fstype)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

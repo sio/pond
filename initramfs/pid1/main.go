@@ -10,6 +10,13 @@ import (
 func Run() {
 	task := NewTaskQueue()
 	go task.PrintResults()
+
+	task.Go(
+		"Mount /dev, /sys, /proc",
+		mountDevSysProc,
+	)
+
+	// TODO: remove dummy tasks from initramfs
 	wait := func() error {
 		n := time.Duration(rand.Intn(10) + 1)
 		time.Sleep(time.Second * n / 100)
