@@ -112,8 +112,11 @@ $(DELVE):
 	$(GO) install github.com/go-delve/delve/cmd/dlv@latest
 
 .PHONY: debug delve
+DEBUG_FILE?=$(shell find -name '*.go' -printf "%T@ %p\n" | awk '{ if (max < $$1) { max = $$1; file = $$2 } } END { print file; }')
+DEBUG_ACTION?=$(shell awk '/^package/ { print ($$2 == "main") ? "debug" : "test"; exit; }' $(DEBUG_FILE))
+INTO?=$(DEBUG_ACTION) $(abspath $(dir $(DEBUG_FILE)))
 debug delve: $(DELVE)  ## start interactive debugger
-	$(DELVE) debug $(INTO)
+	$(DELVE) $(INTO)
 
 .PHONY: debug-core
 debug-core: CORE?=core.$(PID)
