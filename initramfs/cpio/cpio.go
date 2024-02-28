@@ -31,6 +31,8 @@ func New(w io.Writer) *Archive {
 	return &Archive{
 		writer: w,
 		dirs:   make(map[string]struct{}),
+		copied: make(map[srcdest]struct{}),
+		linked: make(map[srcdest]struct{}),
 	}
 }
 
@@ -39,7 +41,16 @@ type Archive struct {
 	writerMu sync.Mutex
 	dirs     map[string]struct{}
 	dirsMu   sync.RWMutex
+	copied   map[srcdest]struct{}
+	copyMu   sync.RWMutex
+	linked   map[srcdest]struct{}
+	linkMu   sync.RWMutex
 	inode    uint32
+}
+
+type srcdest struct {
+	src  string
+	dest string
 }
 
 // Copy local file to cpio archive
@@ -59,7 +70,13 @@ func (cpio *Archive) Copy(src, dest string) error {
 	if !stat.Mode().IsRegular() && (stat.Mode()&fs.ModeType != fs.ModeSymlink) {
 		return fmt.Errorf("not a regular file: %s (%s)", src, stat.Mode())
 	}
-	return cpio.write(
+	cpio.copyMu.RLock()
+	_, exists := cpio.copied[srcdest{src, dest}]
+	cpio.copyMu.RUnlock()
+	if exists {
+		return nil
+	}
+	err = cpio.write(
 		file,
 		dest,
 		Header{
@@ -67,11 +84,23 @@ func (cpio *Archive) Copy(src, dest string) error {
 			filesize: uint32(stat.Size()),
 		},
 	)
+	if err == nil {
+		cpio.copyMu.Lock()
+		cpio.copied[srcdest{src, dest}] = struct{}{}
+		cpio.copyMu.Unlock()
+	}
+	return err
 }
 
 // Create a symbolic link inside cpio archive
 func (cpio *Archive) Link(target, linkname string) error {
-	return cpio.write(
+	cpio.linkMu.RLock()
+	_, exists := cpio.linked[srcdest{target, linkname}]
+	cpio.linkMu.RUnlock()
+	if exists {
+		return nil
+	}
+	err := cpio.write(
 		strings.NewReader(target+"\x00"),
 		linkname,
 		Header{
@@ -79,6 +108,12 @@ func (cpio *Archive) Link(target, linkname string) error {
 			filesize: uint32(len(target) + 1),
 		},
 	)
+	if err == nil {
+		cpio.linkMu.Lock()
+		cpio.linked[srcdest{target, linkname}] = struct{}{}
+		cpio.linkMu.Unlock()
+	}
+	return err
 }
 
 func (cpio *Archive) write(data io.Reader, path string, header Header) error {
