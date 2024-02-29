@@ -5,6 +5,11 @@ INITRD?=/boot/initrd.img-$(shell uname -r)
 .PHONY: boot
 PANIC?=panic=-1
 boot:  ## launch a diskless virtual machine with custom initramfs
+	@echo -n "Kernel version "
+	@LANG=C file $(KERNEL) | awk \
+		'BEGIN { RS=", " } \
+		 /version / { print substr($$0,9); found=1 } \
+		 END { if (!found) { print "detection failed for $(KERNEL)"; exit 29; } }'
 	$(KVM) \
 		-kernel $(KERNEL) \
 		-initrd $(INITRD) \
