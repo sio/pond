@@ -61,13 +61,16 @@ func (s *recursive) Search(path string) error {
 			return fmt.Errorf("%s: %w", interp, err)
 		}
 	}
-
+	dirs, err := exe.DynString(elf.DT_RUNPATH)
+	if err != nil {
+		return fmt.Errorf("%s: failed to parse DT_RUNPATH", path)
+	}
 	libs, err := exe.ImportedLibraries()
 	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	for _, lib := range libs {
-		libpath, err := library(lib)
+		libpath, err := library(lib, dirs)
 		if err != nil {
 			return fmt.Errorf("%s: %w", lib, err)
 		}
@@ -81,7 +84,7 @@ func (s *recursive) Search(path string) error {
 }
 
 // Resolve library path by name
-func library(lib string) (path string, err error) {
+func library(lib string, dirs []string) (path string, err error) {
 	if ldcache == nil {
 		ldcache = newCache()
 	}
@@ -92,7 +95,7 @@ func library(lib string) (path string, err error) {
 	if found {
 		return path, nil
 	}
-	dirs := []string{"/lib", "/usr/lib", "/lib64", "/usr/lib64"}
+	dirs = append(dirs, "/lib", "/usr/lib", "/lib64", "/usr/lib64")
 	gnudir := arch + "-linux-gnu"
 	origLen := len(dirs)
 	for i := 0; i < origLen; i++ {

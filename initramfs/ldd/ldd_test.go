@@ -10,19 +10,23 @@ import (
 	"path/filepath"
 )
 
-func TestLdd(t *testing.T) {
-	gotool, err := exec.LookPath("go")
+func TestLddManually(t *testing.T) {
+	target := os.Getenv("LDD_TARGET")
+	if target == "" {
+		t.Skipf("$LDD_TARGET is not set")
+	}
+	target, err := exec.LookPath(target)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deps, err := Depends(gotool)
+	deps, err := Depends(target)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(deps) == 0 {
 		t.Fatal("failed to find dependencies")
 	}
-	t.Logf("%s => %v", gotool, deps)
+	t.Logf("%s => %v", target, deps)
 	for _, path := range deps {
 		stat, err := os.Stat(path)
 		if err != nil {
@@ -34,9 +38,9 @@ func TestLdd(t *testing.T) {
 	}
 }
 
-func TestInterp(t *testing.T) {
+func TestListInterpreters(t *testing.T) {
 	if os.Getenv("LDD_LIST_INTERPRETERS") == "" {
-		t.Skipf("$LDD_LIST_INTERPRETERS is unset")
+		t.Skipf("$LDD_LIST_INTERPRETERS is not set")
 	}
 	for _, dir := range []string{"/bin", "/sbin", "/usr/bin", "/usr/sbin"} {
 		files, err := filepath.Glob(dir + "/*")
