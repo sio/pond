@@ -1,0 +1,35 @@
+name: initramfs
+
+on:
+  push:
+    paths:
+      - 'initramfs/**'
+      - '.github/workflows/initramfs*'
+  pull_request:
+    paths:
+      - 'initramfs/**'
+      - '.github/workflows/initramfs*'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: initramfs
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/
+            ~/go/
+          key: golang-${{ runner.os }}-initramfs-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            golang-${{ runner.os }}-all-subprojects-${{ hashFiles('**/go.sum') }}
+            golang-${{ runner.os }}-initramfs
+            golang-${{ runner.os }}-all-subprojects
+            golang-${{ runner.os }}
+      - run: make ci
