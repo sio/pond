@@ -30,6 +30,10 @@ func TestModinfo(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if want.Name == "" {
+			// sometimes modinfo fails with -Fname; we are not testing for that here
+			want.Name = got.Name
+		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("module info does not match the reference implementation")
 			t.Logf("got %s", got)
