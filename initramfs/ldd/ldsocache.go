@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -35,25 +35,18 @@ func ldsoCache(filename string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = file.Seek(-int64(header.TableSize), io.SeekEnd)
-	if err != nil {
-		return nil, err
-	}
 	scanner := bufio.NewScanner(file)
 	scanner.Split(splitNuls)
 	var cache = make(map[string]string)
-	var key string
-	var readKey bool
 	for scanner.Scan() {
-		readKey = !readKey
-		if readKey {
-			key = scanner.Text()
+		path := filepath.Clean(scanner.Text())
+		if len(path) < 3 || path[0] != '/' {
 			continue
 		}
-		cache[key] = scanner.Text()
-		if !strings.HasSuffix(cache[key], key) {
-			return nil, fmt.Errorf("mismatching cache value: %s => %s", key, cache[key])
+		if len(strings.Split(filepath.Clean(path), "/")) < 2 {
+			continue
 		}
+		cache[filepath.Base(path)] = path
 	}
 	if scanner.Err() != nil {
 		return nil, scanner.Err()
