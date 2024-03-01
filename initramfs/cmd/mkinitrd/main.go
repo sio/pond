@@ -14,6 +14,7 @@ var config = struct {
 	Init   string
 	Output string
 	Exe    []string
+	Copy   map[string]string // destination: source
 }{
 	Init:   os.Getenv("INIT"),
 	Output: os.Getenv("INITRD"),
@@ -25,6 +26,16 @@ var config = struct {
 		"/bin/find",
 		"/bin/mkdir",
 		"/bin/cat",
+		"/bin/sort",
+		"/sbin/modprobe",
+	},
+	Copy: map[string]string{
+		// These three modules form a dependency tree:
+		//    ata_generic -> libata -> scsi_mod
+		// Try deleting any of the dependencies and see what happens in `make demo`
+		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/ata_generic.ko": "",
+		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/libata.ko":      "",
+		"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
 	},
 }
 
@@ -66,6 +77,15 @@ func main() {
 		for _, lib := range deps {
 			cp(lib, lib)
 		}
+	}
+	for dest, src := range config.Copy {
+		if src == "" {
+			src = dest
+		}
+		if len(dest) > 0 && dest[0] == '/' {
+			dest = dest[1:]
+		}
+		cp(src, dest)
 	}
 	err = initramfs.Close()
 	if err != nil {

@@ -1,4 +1,3 @@
-/* Fetch some metadata from a binary Linux kernel module file */
 package kmod
 
 import (
@@ -25,6 +24,7 @@ func (mod Modinfo) String() string {
 	return repr
 }
 
+// Fetch some metadata from a binary Linux kernel module file
 func Info(path string) (info Modinfo, err error) {
 	bin, err := elf.Open(path)
 	if err != nil {

@@ -15,6 +15,11 @@ func Run() {
 		"Mount /dev, /sys, /proc",
 		mountDevSysProc,
 	)
+	task.Go(
+		"Load kernel modules",
+		loadDeviceModules,
+		"Mount /dev, /sys, /proc",
+	)
 
 	// TODO: remove dummy tasks from initramfs
 	wait := func() error {
@@ -30,8 +35,9 @@ func Run() {
 	task.Go("bar", wait)
 	task.Go("baz", wait, "foo", "bar")
 	task.Go("Expect failure", fail)
-	task.Wait("baz")
+	task.Wait("Load kernel modules")
 	fmt.Println(task.Status())
+	time.Sleep(time.Second / 10)
 
 	// TODO: remove temporary shell from initramfs
 	err := syscall.Exec(
