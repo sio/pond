@@ -38,6 +38,7 @@ func ldsoCache(filename string) (map[string]string, error) {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(splitNuls)
 	var cache = make(map[string]string)
+	var count int
 	for scanner.Scan() {
 		path := filepath.Clean(scanner.Text())
 		if len(path) < 3 || path[0] != '/' {
@@ -47,11 +48,12 @@ func ldsoCache(filename string) (map[string]string, error) {
 			continue
 		}
 		cache[filepath.Base(path)] = path
+		count++
 	}
 	if scanner.Err() != nil {
 		return nil, scanner.Err()
 	}
-	if len(cache) != int(header.Count) {
+	if count != int(header.Count) {
 		return nil, fmt.Errorf("mismatching entries count: header advertised %d items, got %d", header.Count, len(cache))
 	}
 	delete(cache, "ld-linux-x86-64.so.2") // causes multiple different paths for same library
