@@ -68,7 +68,7 @@ update:  ## update Go packages this project depends on
 
 .PHONY: ci
 ci:  ## run continuous integration checks
-ci: lint test bench-quick
+ci: lint test bench-quick build
 
 .PHONY: test test-verbose
 test:  ## run automated tests
