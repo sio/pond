@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -39,43 +40,74 @@ var config = struct {
 	},
 }
 
+var rc int
+
+func fail(f any, v ...any) int {
+	s, ok := f.(string)
+	if !ok || len(v) == 0 {
+		log.Print(f)
+	} else {
+		log.Printf(s, v...)
+	}
+	rc = 11
+	return rc
+}
+
+func _close(f io.Closer) {
+	err := f.Close()
+	if err != nil && rc == 0 {
+		fail(err)
+	}
+}
+
 func main() {
+	run()
+	os.Exit(rc)
+}
+
+func run() int {
 	file, err := os.OpenFile(config.Output, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatal(err)
+		return fail(err)
 	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer _close(file)
+
 	err = file.Truncate(0)
 	if err != nil {
-		log.Fatal(err)
+		return fail(err)
 	}
+
 	compressor, err := zstd.NewWriter(file, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
 	if err != nil {
-		log.Fatal(err)
+		return fail(err)
 	}
+	defer _close(compressor)
+
 	initramfs := cpio.New(compressor)
-	cp := func(src, dest string) {
+	defer _close(initramfs)
+	cp := func(src, dest string) bool {
 		fmt.Printf("%s -> %s\n", src, dest)
 		err = initramfs.Copy(src, dest)
 		if err != nil {
-			log.Fatal(err)
+			fail(err)
+			return false
 		}
+		return true
 	}
 
 	cp(config.Init, "init")
 	for _, exe := range config.Exe {
-		cp(exe, exe)
+		if !cp(exe, exe) {
+			return rc
+		}
 		deps, err := ldd.Depends(exe)
 		if err != nil {
-			log.Fatal(err)
+			return fail(err)
 		}
 		for _, lib := range deps {
-			cp(lib, lib)
+			if !cp(lib, lib) {
+				return rc
+			}
 		}
 	}
 	for dest, src := range config.Copy {
@@ -85,14 +117,9 @@ func main() {
 		if len(dest) > 0 && dest[0] == '/' {
 			dest = dest[1:]
 		}
-		cp(src, dest)
+		if !cp(src, dest) {
+			return rc
+		}
 	}
-	err = initramfs.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = compressor.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
+	return rc
 }
