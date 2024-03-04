@@ -47,8 +47,13 @@ func ldsoCache(filename string) (map[string]string, error) {
 		if len(strings.Split(filepath.Clean(path), "/")) < 2 {
 			continue
 		}
-		cache[filepath.Base(path)] = path
 		count++
+		key := filepath.Base(path)
+		_, exists := cache[key]
+		if exists {
+			continue // use first entry to match ld behavior
+		}
+		cache[key] = path
 	}
 	if scanner.Err() != nil {
 		return nil, scanner.Err()
