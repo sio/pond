@@ -34,14 +34,14 @@ func TestReference(t *testing.T) {
 		}
 		want, err := sandbox.Ldd(exe)
 		if err != nil {
-			if err.Error() == "exit status 1" {
-				continue // there is no point in testing static binaries
-			}
 			if strings.HasSuffix(err.Error(), "=> not found") {
 				continue // if reference implementation failed, we won't even try
 			}
 			t.Errorf("%s: reference ldd: %v", exe, err)
 			continue
+		}
+		if len(want) == 0 {
+			continue // testing zero cases against reference implementation is not interesting
 		}
 		count++
 		got, err := Depends(exe)

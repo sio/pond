@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 )
 
 // This function works by shelling out to `ldd` utility and parsing its output.
@@ -19,13 +20,22 @@ func ldd(path string) (libs []string, err error) {
 	ldd := exec.Command("ldd", path)
 	ldd.Stdout = output
 	ldd.Stderr = output
+	ldd.Env = os.Environ()
+	ldd.Env = append(ldd.Env, "LANG=C", "LC_ALL=C")
 	err = ldd.Run()
 	if err != nil {
-		return nil, err
+		if ldd.ProcessState.ExitCode() == 1 &&
+			strings.TrimSpace(output.String()) == "not a dynamic executable" {
+			return nil, nil // empty output for static binaries
+		}
+		return nil, fmt.Errorf("%w: %s", err, output.String())
 	}
 	libs = make([]string, 0)
 	for _, line := range bytes.Split(output.Bytes(), []byte{'\n'}) {
 		if len(line) < 2 {
+			continue
+		}
+		if strings.TrimSpace(string(line)) == "statically linked" {
 			continue
 		}
 		match := lddArrowName.FindSubmatch(line)
