@@ -52,7 +52,7 @@ func TestReference(t *testing.T) {
 		sort.Strings(want)
 		sort.Strings(got)
 		if len(want) != len(got) {
-			t.Errorf("libraries count mismatch: our %d, reference %d", len(got), len(want))
+			t.Errorf("%s: libraries count mismatch: our %d, reference %d", exe, len(got), len(want))
 		}
 		for i, w := range want {
 			if w != got[i] {
