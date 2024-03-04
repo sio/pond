@@ -1,6 +1,7 @@
 GO?=go
 EVERYTHING=./...
 
+GOBUILD_ARGS?=-ldflags="-s -w"
 GOBUILD_ARGS+=-trimpath
 GOTEST_TIMEOUT?=15s
 GOBENCH_TARGET?=.
