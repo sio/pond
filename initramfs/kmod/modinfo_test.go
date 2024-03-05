@@ -119,6 +119,16 @@ func modinfo(path string) (info Modinfo, err error) {
 		return info, err
 	}
 	info.Name = strings.TrimSpace(string(raw))
+
+	cmd = exec.Command("modinfo", "-Fvermagic", path)
+	raw, err = cmd.Output()
+	if err != nil {
+		return info, err
+	}
+	info.Kernel = strings.TrimSpace(string(raw))
+	if cur := strings.IndexRune(info.Kernel, ' '); cur > 0 {
+		info.Kernel = info.Kernel[:cur]
+	}
 	return info, err
 }
 

@@ -11,10 +11,17 @@ type Modinfo struct {
 	Name    string
 	Depends []string
 	Alias   []string
+	Kernel  string
 }
 
 func (mod Modinfo) String() string {
-	repr := fmt.Sprintf("%s (depends on %d modules, has %d aliases)", mod.Name, len(mod.Depends), len(mod.Alias))
+	repr := fmt.Sprintf(
+		"%s for Linux %s (depends on %d modules, has %d aliases)",
+		mod.Name,
+		mod.Kernel,
+		len(mod.Depends),
+		len(mod.Alias),
+	)
 	if len(mod.Depends) > 0 {
 		repr += fmt.Sprintf("\n\tDepends: %s", strings.Join(mod.Depends, ", "))
 	}
@@ -56,6 +63,14 @@ func Info(path string) (info Modinfo, err error) {
 		value, found = strings.CutPrefix(line, "name=")
 		if found && value != "" {
 			info.Name = value
+			continue
+		}
+		value, found = strings.CutPrefix(line, "vermagic=")
+		if found && value != "" {
+			words := strings.Split(value, " ")
+			if len(words) > 0 {
+				info.Kernel = words[0]
+			}
 			continue
 		}
 	}
