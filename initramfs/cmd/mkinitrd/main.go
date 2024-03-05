@@ -31,6 +31,10 @@ var config = struct {
 		"/bin/mkdir",
 		"/bin/cat",
 		"/bin/sort",
+		"/bin/lspci",
+		"/bin/ip",
+		"/bin/ping",
+		"/sbin/dhclient",
 		"/sbin/modprobe",
 	},
 	Copy: map[string]string{
