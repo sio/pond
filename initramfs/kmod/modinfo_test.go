@@ -20,7 +20,7 @@ const (
 
 // Check our modinfo result against reference implementation
 func TestModinfo(t *testing.T) {
-	check := func(module string) {
+	check := func(module string) int {
 		t.Logf("checking %s", module)
 		got, err := Info(module)
 		if err != nil {
@@ -31,14 +31,17 @@ func TestModinfo(t *testing.T) {
 			t.Fatal(err)
 		}
 		if want.Name == "" {
-			// sometimes modinfo fails with -Fname; we are not testing for that here
-			want.Name = got.Name
+			// Some vendor provided kernel modules (looking at you, Azure) fail
+			// to expose metadata to modinfo utility. Our utility produces more
+			// info in that case. We are not here to troubleshoot that mess.
+			return 0
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Error("module info does not match the reference implementation")
 			t.Logf("got %s", got)
 			t.Logf("want %s", want)
 		}
+		return 1
 	}
 
 	kmod := make(map[string]struct{})
@@ -58,8 +61,7 @@ func TestModinfo(t *testing.T) {
 
 	var count int
 	for module := range kmod {
-		check(module)
-		count++
+		count += check(module)
 		if count >= kmodCheckShort && testing.Short() {
 			break
 		}
