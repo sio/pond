@@ -37,12 +37,13 @@ var config = struct {
 		// These three modules form a dependency tree:
 		//    ata_generic -> libata -> scsi_mod
 		// Try deleting any of the dependencies and see what happens in `make demo`
-		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/ata_generic.ko": "",
-		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/libata.ko":      "",
-		"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
+		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/ata_generic.ko": "",
+		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/libata.ko":      "",
+		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
 	},
 	Kmod: []string{
 		"e1000",
+		"ata_generic",
 	},
 }
 
@@ -132,6 +133,13 @@ func run() int {
 			dest = dest[1:]
 		}
 		cp(src, dest)
+	}
+	modules, err := findKernelModules(config.KmodDir, config.Kmod)
+	if err != nil {
+		return fail(err)
+	}
+	for _, module := range modules {
+		copyQueue <- module
 	}
 
 	close(copyQueue)

@@ -113,30 +113,31 @@ type aliasglob struct {
 // is typically very low, so generating this metadata at every boot will not
 // become expensive.
 func refresh() {
-	modules := make(chan string)
-	uname := new(unix.Utsname)
-	err := unix.Uname(uname)
-	if err != nil {
-		return
-	}
-	release := string(uname.Release[:bytes.IndexByte(uname.Release[:], 0)])
-	go walk("/lib/modules/"+release, modules)
-	for path := range modules {
+	_ = Walk("", func(path string) error {
 		mod, err := Info(path)
 		if err != nil {
-			continue
+			return nil
 		}
 		modpath[mod.Name] = path
 		for _, a := range mod.Alias {
 			modalias = append(modalias, aliasglob{mod.Name, a})
 		}
-	}
+		return nil
+	})
 }
 
 // Find all kernel module files in given directory
-func walk(dir string, modules chan<- string) {
-	defer close(modules)
-	_ = fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
+func Walk(dir string, do func(path string) error) error {
+	if dir == "" {
+		uname := new(unix.Utsname)
+		err := unix.Uname(uname)
+		if err != nil {
+			return err
+		}
+		release := string(uname.Release[:bytes.IndexByte(uname.Release[:], 0)])
+		dir = "/lib/modules/" + release
+	}
+	return fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -154,7 +155,6 @@ func walk(dir string, modules chan<- string) {
 		if stat.Mode()&0b100100100 == 0 { // check if we have permission to read the file
 			return nil
 		}
-		modules <- fullpath
-		return nil
+		return do(fullpath)
 	})
 }
