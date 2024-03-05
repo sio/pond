@@ -12,6 +12,7 @@ import (
 	"github.com/sio/pond/initramfs/ldd"
 )
 
+// TODO: rearrange mkinitrd actions: config.Copy should probably be the last step
 var config = struct {
 	Init    string
 	Output  string
