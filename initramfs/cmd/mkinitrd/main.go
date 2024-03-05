@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sio/pond/initramfs/cpio"
@@ -12,10 +13,12 @@ import (
 )
 
 var config = struct {
-	Init   string
-	Output string
-	Exe    []string
-	Copy   map[string]string // destination: source
+	Init    string
+	Output  string
+	Exe     []string
+	Copy    map[string]string // destination: source
+	Kmod    []string
+	KmodDir string
 }{
 	Init:   os.Getenv("INIT"),
 	Output: os.Getenv("INITRD"),
@@ -37,6 +40,9 @@ var config = struct {
 		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/ata_generic.ko": "",
 		"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/libata.ko":      "",
 		"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
+	},
+	Kmod: []string{
+		"e1000",
 	},
 }
 
@@ -85,29 +91,37 @@ func run() int {
 
 	initramfs := cpio.New(compressor)
 	defer _close(initramfs)
-	cp := func(src, dest string) bool {
-		fmt.Printf("%s -> %s\n", src, dest)
-		err = initramfs.Copy(src, dest)
-		if err != nil {
-			fail(err)
-			return false
+
+	var wg sync.WaitGroup
+	copyQueue := make(chan srcdest)
+	wg.Add(1)
+	go func() {
+		for f := range copyQueue {
+			if rc != 0 {
+				continue
+			}
+			fmt.Printf("%s -> %s\n", f.src, f.dest)
+			err := initramfs.Copy(f.src, f.dest)
+			if err != nil {
+				fail(err)
+			}
 		}
-		return true
+		wg.Done()
+	}()
+
+	cp := func(src, dest string) {
+		copyQueue <- srcdest{src, dest}
 	}
 
 	cp(config.Init, "init")
 	for _, exe := range config.Exe {
-		if !cp(exe, exe) {
-			return rc
-		}
+		cp(exe, exe)
 		deps, err := ldd.Depends(exe)
 		if err != nil {
 			return fail(err)
 		}
 		for _, lib := range deps {
-			if !cp(lib, lib) {
-				return rc
-			}
+			cp(lib, lib)
 		}
 	}
 	for dest, src := range config.Copy {
@@ -117,9 +131,15 @@ func run() int {
 		if len(dest) > 0 && dest[0] == '/' {
 			dest = dest[1:]
 		}
-		if !cp(src, dest) {
-			return rc
-		}
+		cp(src, dest)
 	}
+
+	close(copyQueue)
+	wg.Wait()
 	return rc
+}
+
+type srcdest struct {
+	src  string
+	dest string
 }
