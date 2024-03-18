@@ -37,6 +37,7 @@ var config = struct {
 		"/bin/ping",
 		"/sbin/dhclient",
 		"/sbin/modprobe",
+		"/bin/curl",
 	},
 	Copy: map[string]string{
 		// These three modules form a dependency tree:
