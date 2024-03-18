@@ -6,15 +6,18 @@ import (
 	"sync"
 )
 
+// Human readable name for init task
 type Task string
 
+// A task queue that makes good use of Go concurrency model to launch init
+// tasks as fast as possible
 type TaskQueue struct {
 	tasks   map[Task]chan struct{}
 	mu      sync.Mutex
-	results chan TaskResult
+	results chan result
 }
 
-type TaskResult struct {
+type result struct {
 	Task Task
 	Err  error
 }
@@ -22,7 +25,7 @@ type TaskResult struct {
 func NewTaskQueue() *TaskQueue {
 	return &TaskQueue{
 		tasks:   make(map[Task]chan struct{}),
-		results: make(chan TaskResult, 16),
+		results: make(chan result, 16),
 	}
 }
 
@@ -35,12 +38,18 @@ func (q *TaskQueue) Wait(tasks ...Task) {
 
 func (q *TaskQueue) Go(task Task, worker func() error, depends ...Task) {
 	q.Wait(depends...)
+	ch := q.ch(task)
+	select {
+	case <-ch:
+		return // do not do the same task again
+	default:
+	}
 	go q.do(task, worker)
 }
 
 func (q *TaskQueue) do(task Task, worker func() error) {
 	err := worker()
-	q.results <- TaskResult{task, err}
+	q.results <- result{task, err}
 	if err == nil {
 		q.done(task)
 	}
