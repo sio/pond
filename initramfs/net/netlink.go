@@ -1,4 +1,4 @@
-package pid1
+package net
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ const (
 	iff_ECHO
 )
 
-func ifup(iface string) error {
+func Up(iface string) error {
 	flagPath := fmt.Sprintf("/sys/class/net/%s/flags", iface)
 	raw, err := os.ReadFile(flagPath)
 	if err != nil {
@@ -54,8 +54,4 @@ func ifup(iface string) error {
 	}
 	flags |= iff_UP
 	return os.WriteFile(flagPath, []byte(fmt.Sprintf("%x\n", flags)), 0)
-}
-
-func networkUp() error {
-	return ifup("eth0") // TODO
 }
