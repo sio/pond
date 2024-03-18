@@ -21,6 +21,12 @@ var tasks = map[Task]*run{
 			"Mount /dev, /sys, /proc",
 		},
 	},
+	"Bring up the network": &run{
+		Do: networkUp,
+		After: []Task{
+			"Load kernel modules",
+		},
+	},
 	"Switch root": &run{}, // TODO: implement the last task
 }
 
@@ -53,7 +59,7 @@ func Run() {
 		shell,
 		[]Task{
 			"baz",
-			"Load kernel modules",
+			"Bring up the network",
 		},
 		[]Task{Target},
 	)
