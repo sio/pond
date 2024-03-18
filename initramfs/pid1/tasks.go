@@ -90,24 +90,16 @@ func (q *TaskQueue) Status() string {
 	}
 }
 
-const (
-	asciiEsc   = "\u001B["
-	asciiRed   = asciiEsc + "31;1m"
-	asciiGreen = asciiEsc + "32;1m"
-	asciiReset = asciiEsc + "0m"
-	tagError   = asciiRed + " FAIL " + asciiReset
-	tagOK      = asciiGreen + "  OK  " + asciiReset
-)
-
 func (q *TaskQueue) PrintResults() {
-	var status, tag string
+	var status string
+	var log func(f string, a ...any)
 	for r := range q.results {
 		status = "done"
-		tag = tagOK
+		log = MsgOK
 		if r.Err != nil {
-			tag = tagError
 			status = r.Err.Error()
+			log = MsgErr
 		}
-		fmt.Printf("[%s] %s... %s.\n", tag, r.Task, status)
+		log("%s... %s.", r.Task, status)
 	}
 }
