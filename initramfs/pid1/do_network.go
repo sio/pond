@@ -23,6 +23,9 @@ func networkUp() error {
 	if err != nil {
 		return err
 	}
+	if len(interfaces) == 0 {
+		return fmt.Errorf("no network interfaces in /sys/class/net")
+	}
 	errs := make(map[string]error)
 	tick := make(chan struct{})
 	for _, iface := range interfaces {
@@ -41,9 +44,6 @@ func networkUp() error {
 		case <-ctx.Done():
 			return nil
 		case <-tick:
-			if len(interfaces) == 0 {
-				return fmt.Errorf("no network interfaces in /sys/class/net")
-			}
 			if len(errs) == len(interfaces) {
 				message := new(strings.Builder)
 				for _, iface := range interfaces {
