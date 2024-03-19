@@ -17,6 +17,7 @@ var config = struct {
 	Init    string
 	Output  string
 	Exe     []string
+	Lib     []string
 	Copy    map[string]string // destination: source
 	Kmod    []string
 	KmodDir string
@@ -38,6 +39,11 @@ var config = struct {
 		"/sbin/dhclient",
 		"/sbin/modprobe",
 		"/bin/curl",
+		"/bin/strace",
+	},
+	Lib: []string{
+		"libnss_files.so.2",
+		"libnss_dns.so.2",
 	},
 	Copy: map[string]string{
 		// These three modules form a dependency tree:
@@ -129,6 +135,20 @@ func run() int {
 			return fail(err)
 		}
 		for _, lib := range deps {
+			cp(lib, lib)
+		}
+	}
+	for _, lib := range config.Lib {
+		lib, err = ldd.Library(lib, nil)
+		if err != nil {
+			return fail(err)
+		}
+		deps, err := ldd.Depends(lib)
+		if err != nil {
+			return fail(err)
+		}
+		cp(lib, lib)
+		for _, lib = range deps {
 			cp(lib, lib)
 		}
 	}

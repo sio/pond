@@ -1,6 +1,7 @@
 package pid1
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -93,7 +94,36 @@ func configure(ctx context.Context, iface string) error {
 		Gw:        config.router,
 		LinkIndex: link.Attrs().Index,
 	}
-	return netlink.RouteAdd(route)
+	err = netlink.RouteAdd(route)
+	if err != nil {
+		return err
+	}
+
+	// Save DNS configuration (requires libnss_files.so.2, libnss_dns.so.2).
+	//
+	// Context expiration is intentionally not checked here, because we have
+	// already replaced the default route - short circuiting would leave system
+	// in a broken state.
+	dns := new(bytes.Buffer)
+	_, _ = fmt.Fprintf(dns, "\n# pond/initramfs: automatic configuration for %s\n", iface)
+	for _, nameserver := range config.dns {
+		_, _ = fmt.Fprintf(dns, "nameserver %s\n", nameserver)
+	}
+	dns.WriteString("\n")
+	err = os.MkdirAll("/etc", 0755)
+	if err != nil {
+		return err
+	}
+	resolvconf, err := os.OpenFile("/etc/resolv.conf", os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resolvconf.Close() }()
+	_, err = resolvconf.Write(dns.Bytes())
+	if err != nil {
+		return err
+	}
+	return resolvconf.Close()
 }
 
 // Bring interface up

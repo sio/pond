@@ -70,7 +70,7 @@ func (s *recursive) Search(path string) error {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	for _, lib := range libs {
-		libpath, err := library(lib, dirs)
+		libpath, err := Library(lib, dirs)
 		if err != nil {
 			return fmt.Errorf("%s: %w", lib, err)
 		}
@@ -84,7 +84,7 @@ func (s *recursive) Search(path string) error {
 }
 
 // Resolve library path by name
-func library(lib string, dirs []string) (path string, err error) {
+func Library(lib string, dirs []string) (path string, err error) {
 	if ldcache == nil {
 		ldcache = newCache()
 	}
