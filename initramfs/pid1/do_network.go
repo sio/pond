@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -53,6 +54,8 @@ func networkUp() error {
 		}
 	}
 }
+
+var resolvconfMu sync.Mutex
 
 // Configure a single network interface
 func configure(ctx context.Context, iface string) error {
@@ -118,6 +121,8 @@ func configure(ctx context.Context, iface string) error {
 	if err != nil {
 		return err
 	}
+	resolvconfMu.Lock()
+	defer resolvconfMu.Unlock()
 	resolvconf, err := os.OpenFile("/etc/resolv.conf", os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return err
