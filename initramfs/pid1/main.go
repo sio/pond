@@ -15,6 +15,12 @@ var tasks = map[Task]*run{
 	"Mount /dev, /sys, /proc": &run{
 		Do: mountDevSysProc,
 	},
+	"Initalize random number generator": &run{
+		Do: seedRandomGenerator,
+		After: []Task{
+			"Mount /dev, /sys, /proc",
+		},
+	},
 	"Load kernel modules": &run{
 		Do: loadDeviceModules,
 		After: []Task{
@@ -25,6 +31,7 @@ var tasks = map[Task]*run{
 		Do: networkUp,
 		After: []Task{
 			"Load kernel modules",
+			"Initalize random number generator",
 		},
 	},
 	"Switch root": &run{}, // TODO: implement the last task
