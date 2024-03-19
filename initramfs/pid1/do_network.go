@@ -17,6 +17,7 @@ import (
 // Try to configure all interfaces at once, stop at first success
 func networkUp() error {
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	interfaces, err := os.ReadDir("/sys/class/net")
 	if err != nil {
 		return err
@@ -78,7 +79,10 @@ func configure(ctx context.Context, iface string) error {
 	err = netlink.AddrAdd(
 		link,
 		&netlink.Addr{
-			IPNet: &net.IPNet{config.addr, config.subnet},
+			IPNet: &net.IPNet{
+				IP:   config.addr,
+				Mask: config.subnet,
+			},
 		},
 	)
 	if err != nil {
