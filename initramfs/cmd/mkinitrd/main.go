@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/klauspost/compress/zstd"
 	"github.com/sio/pond/initramfs/cpio"
@@ -52,6 +51,7 @@ var config = struct {
 		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/ata_generic.ko": "",
 		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/ata/libata.ko":      "",
 		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
+		"/etc/motd": "",
 	},
 	Kmod: []string{
 		"e1000",  // default QEMU network card
@@ -86,45 +86,16 @@ func main() {
 }
 
 func run() int {
-	file, err := os.OpenFile(config.Output, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return fail(err)
-	}
-	defer _close(file)
-
-	err = file.Truncate(0)
-	if err != nil {
-		return fail(err)
-	}
-
-	compressor, err := zstd.NewWriter(file, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
-	if err != nil {
-		return fail(err)
-	}
-	defer _close(compressor)
-
-	initramfs := cpio.New(compressor)
-	defer _close(initramfs)
-
-	var wg sync.WaitGroup
-	copyQueue := make(chan srcdest)
-	wg.Add(1)
-	go func() {
-		for f := range copyQueue {
-			if rc != 0 {
-				continue
-			}
-			fmt.Printf("%s -> %s\n", f.src, f.dest)
-			err := initramfs.Copy(f.src, f.dest)
-			if err != nil {
-				fail(err)
-			}
-		}
-		wg.Done()
-	}()
-
+	// Build filesystem tree in memory
+	fs := make(map[string]string) // dest: src
 	cp := func(src, dest string) {
-		copyQueue <- srcdest{src, dest}
+		if src == "" {
+			src = dest
+		}
+		if dest != "" && dest[0] == '/' {
+			dest = dest[1:]
+		}
+		fs[dest] = src
 	}
 
 	cp(config.Init, "init")
@@ -139,7 +110,7 @@ func run() int {
 		}
 	}
 	for _, lib := range config.Lib {
-		lib, err = ldd.Library(lib, nil)
+		lib, err := ldd.Library(lib, nil)
 		if err != nil {
 			return fail(err)
 		}
@@ -152,29 +123,40 @@ func run() int {
 			cp(lib, lib)
 		}
 	}
-	for dest, src := range config.Copy {
-		if src == "" {
-			src = dest
-		}
-		if len(dest) > 0 && dest[0] == '/' {
-			dest = dest[1:]
-		}
-		cp(src, dest)
-	}
 	modules, err := findKernelModules(config.KmodDir, config.Kmod)
 	if err != nil {
 		return fail(err)
 	}
 	for _, module := range modules {
-		copyQueue <- module
+		cp(module.src, module.dest)
+	}
+	for dest, src := range config.Copy {
+		cp(src, dest)
 	}
 
-	close(copyQueue)
-	wg.Wait()
+	// Actually add files to archive
+	file, err := os.OpenFile(config.Output, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return fail(err)
+	}
+	defer _close(file)
+	err = file.Truncate(0)
+	if err != nil {
+		return fail(err)
+	}
+	compressor, err := zstd.NewWriter(file, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	if err != nil {
+		return fail(err)
+	}
+	defer _close(compressor)
+	initramfs := cpio.New(compressor)
+	defer _close(initramfs)
+	for dest, src := range fs {
+		fmt.Printf("%s -> %s\n", src, dest)
+		err := initramfs.Copy(src, dest)
+		if err != nil {
+			fail(err)
+		}
+	}
 	return rc
-}
-
-type srcdest struct {
-	src  string
-	dest string
 }

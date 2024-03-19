@@ -86,3 +86,7 @@ func add(name string, cache map[string]struct{}, tree kmodTree) error {
 	}
 	return nil
 }
+
+type srcdest struct {
+	src, dest string
+}
