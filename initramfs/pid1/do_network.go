@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/insomniacslk/dhcp/dhcpv4"
@@ -11,17 +13,67 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+// Try to configure all interfaces at once, stop at first success
 func networkUp() error {
-	const iface = "eth0"
+	ctx, cancel := context.WithCancel(context.Background())
+	interfaces, err := os.ReadDir("/sys/class/net")
+	if err != nil {
+		return err
+	}
+	errs := make(map[string]error)
+	tick := make(chan struct{})
+	for _, iface := range interfaces {
+		go func(iface string) {
+			defer func() { tick <- struct{}{} }()
+			err := configure(ctx, iface)
+			if err == nil {
+				cancel()
+				return
+			}
+			errs[iface] = err
+		}(iface.Name())
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-tick:
+			if len(interfaces) == 0 {
+				return fmt.Errorf("no network interfaces in /sys/class/net")
+			}
+			if len(errs) == len(interfaces) {
+				message := new(strings.Builder)
+				for _, iface := range interfaces {
+					_, _ = fmt.Fprintf(message, "%s: %s\n", iface.Name(), errs[iface.Name()])
+				}
+				return fmt.Errorf("all interfaces failed:\n%s", strings.TrimSpace(message.String()))
+			}
+		}
+	}
+}
 
+// Configure a single network interface
+func configure(ctx context.Context, iface string) error {
+
+	// $ ip link set $IFACE up
 	link, err := ifup(iface)
 	if err != nil {
 		return err
 	}
-	config, err := dhcpc(iface)
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// $ dhclient -v $IFACE
+	config, err := dhcpc(ctx, iface)
 	if err != nil {
 		return err
 	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// $ ip addr add $ADDRESS/$NETMASK dev $IFACE
 	err = netlink.AddrAdd(
 		link,
 		&netlink.Addr{
@@ -31,6 +83,11 @@ func networkUp() error {
 	if err != nil {
 		return err
 	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	// $ ip route add default via $ROUTER dev $IFACE
 	route := &netlink.Route{
 		Dst:       &net.IPNet{},
 		Gw:        config.router,
@@ -50,7 +107,7 @@ func ifup(iface string) (link netlink.Link, err error) {
 		return link, nil // already up
 	}
 	if attrs.Flags&net.FlagLoopback != 0 {
-		return link, fmt.Errorf("loopback interfaces are not supported: %s", iface)
+		return link, fmt.Errorf("loopback interface; no outside connectivity")
 	}
 	return link, netlink.LinkSetUp(link)
 }
@@ -64,12 +121,12 @@ type network struct {
 }
 
 // Obtain DHCP lease
-func dhcpc(iface string) (settings network, err error) {
+func dhcpc(ctx context.Context, iface string) (settings network, err error) {
 	client, err := nclient4.New(iface)
 	if err != nil {
 		return settings, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	offer, err := client.DiscoverOffer(ctx)
 	if err != nil {
