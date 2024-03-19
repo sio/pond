@@ -1,12 +1,45 @@
 package pid1
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"time"
 
+	"github.com/insomniacslk/dhcp/dhcpv4"
+	"github.com/insomniacslk/dhcp/dhcpv4/nclient4"
 	"github.com/vishvananda/netlink"
 )
 
+func networkUp() error {
+	const iface = "eth0"
+
+	link, err := ifup(iface)
+	if err != nil {
+		return err
+	}
+	config, err := dhcpc(iface)
+	if err != nil {
+		return err
+	}
+	err = netlink.AddrAdd(
+		link,
+		&netlink.Addr{
+			IPNet: &net.IPNet{config.addr, config.subnet},
+		},
+	)
+	if err != nil {
+		return err
+	}
+	route := &netlink.Route{
+		Dst:       &net.IPNet{},
+		Gw:        config.router,
+		LinkIndex: link.Attrs().Index,
+	}
+	return netlink.RouteAdd(route)
+}
+
+// Bring interface up
 func ifup(iface string) (link netlink.Link, err error) {
 	link, err = netlink.LinkByName(iface)
 	if err != nil {
@@ -22,35 +55,70 @@ func ifup(iface string) (link netlink.Link, err error) {
 	return link, netlink.LinkSetUp(link)
 }
 
-func ip(link netlink.Link, addr string) error {
-	address, err := netlink.ParseAddr(addr)
-	if err != nil {
-		return err
-	}
-	return netlink.AddrAdd(link, address)
+// Network settings we care about
+type network struct {
+	addr   net.IP
+	router net.IP
+	subnet net.IPMask
+	dns    []net.IP
 }
 
-func route(link netlink.Link, gw net.IP) error {
-	_, cidr, err := net.ParseCIDR("0.0.0.0/0")
+// Obtain DHCP lease
+func dhcpc(iface string) (settings network, err error) {
+	client, err := nclient4.New(iface)
 	if err != nil {
-		return err
+		return settings, err
 	}
-	route := &netlink.Route{
-		Dst:       cidr,
-		Gw:        gw,
-		LinkIndex: link.Attrs().Index,
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	offer, err := client.DiscoverOffer(ctx)
+	if err != nil {
+		return settings, fmt.Errorf("DHCP on %s: %w", iface, err)
 	}
-	return netlink.RouteAdd(route)
+	lease, err := client.RequestFromOffer(ctx, offer)
+	if err != nil {
+		return settings, fmt.Errorf("DHCP on %s: %w", iface, err)
+	}
+	ack := lease.ACK
+
+	router := dhcpv4.GetIP(dhcpv4.OptionRouter, ack.Options)
+	if empty(router) {
+		router = ack.GatewayIPAddr
+	}
+	if empty(router) {
+		router = ack.ServerIPAddr
+	}
+	if empty(router) {
+		return settings, fmt.Errorf("DHCP on %s: could not detect router address", iface)
+	}
+	settings.router = router
+
+	settings.addr = ack.YourIPAddr
+	if empty(settings.addr) {
+		return settings, fmt.Errorf("DHCP on %s: did not receive an IP address", iface)
+	}
+
+	subnetBytes := ack.Options.Get(dhcpv4.OptionSubnetMask)
+	settings.subnet = net.IPMask(subnetBytes)
+	ones, bits := settings.subnet.Size()
+	if subnetBytes == nil || (ones+bits) == 0 {
+		settings.subnet = settings.addr.DefaultMask()
+	}
+
+	settings.dns = dhcpv4.GetIPs(dhcpv4.OptionDomainNameServer, ack.Options)
+	if len(settings.dns) == 0 {
+		settings.dns = []net.IP{
+			settings.router,
+			net.ParseIP("8.8.8.8"),
+			net.ParseIP("8.8.4.4"),
+		}
+		if !empty(ack.ServerIPAddr) {
+			settings.dns = append(settings.dns, ack.ServerIPAddr)
+		}
+	}
+	return settings, nil
 }
 
-func networkUp() error {
-	link, err := ifup("eth0") // TODO
-	if err != nil {
-		return err
-	}
-	err = ip(link, "10.0.2.15/24") // TODO
-	if err != nil {
-		return err
-	}
-	return route(link, net.ParseIP("10.0.2.2")) // TODO
+func empty(addr net.IP) bool {
+	return addr.IsUnspecified() || addr == nil
 }
