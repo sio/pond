@@ -26,4 +26,8 @@ demo:  ## boot our initramfs in qemu
 		INIT=$(BIN_DIR)/init$(BIN_SUFFIX) \
 		INITRD=bin/initramfs
 
+.PHONY: demo-realtek
+demo-realtek:  ## boot our initramfs with another network card
+	$(MAKE) demo QEMU_ARGS="-netdev user,id=n0 -device rtl8139,netdev=n0"
+
 include ../Makefile.golang

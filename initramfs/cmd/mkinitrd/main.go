@@ -48,7 +48,8 @@ var config = struct {
 		//"/lib/modules/5.10.0-19-amd64/kernel/drivers/scsi/scsi_mod.ko":   "",
 	},
 	Kmod: []string{
-		"e1000",
+		"e1000",  // default QEMU network card
+		"8139cp", // another QEMU emulated NIC, Realtek 8139
 		"ata_generic",
 	},
 }
