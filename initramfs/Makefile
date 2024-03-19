@@ -1,22 +1,23 @@
-KVM?=qemu-system-x86_64
+QEMU?=qemu-system-x86_64
 KERNEL?=/boot/vmlinuz-$(shell uname -r)
 INITRD?=/boot/initrd.img-$(shell uname -r)
 
 .PHONY: boot
-PANIC?=panic=-1
+KERNEL_CMDLINE?=panic=-1
 boot:  ## launch a diskless virtual machine with custom initramfs
 	@echo -n "Kernel version "
 	@LANG=C file $(KERNEL) | awk \
 		'BEGIN { RS=", " } \
 		 /version / { print substr($$0,9); found=1 } \
 		 END { if (!found) { print "detection failed for $(KERNEL)"; exit 29; } }'
-	$(KVM) \
+	$(QEMU) \
 		-kernel $(KERNEL) \
 		-initrd $(INITRD) \
-		-append "console=tty0 console=ttyS0,115200 noquiet $(PANIC)" \
+		-append "console=tty0 console=ttyS0,115200 noquiet $(KERNEL_CMDLINE)" \
 		-m 1G \
 		-nographic \
 		-no-reboot \
+		$(QEMU_ARGS)
 
 .PHONY: demo
 demo: build
