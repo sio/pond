@@ -148,7 +148,7 @@ func ifup(iface string) (link netlink.Link, err error) {
 	if attrs.Flags&net.FlagLoopback != 0 {
 		return link, fmt.Errorf("loopback interface; no outside connectivity")
 	}
-	return link, netlink.LinkSetUp(link)
+	return link, netlink.LinkSetUp(link) // TODO: rtr7/gokrazy do retries here, is that really needed? DHCP will wait later anyways
 }
 
 // Network settings we care about
