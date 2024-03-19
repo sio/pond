@@ -16,6 +16,9 @@ boot:  ## launch a diskless virtual machine with custom initramfs
 		-append "console=tty0 console=ttyS0,115200 noquiet $(KERNEL_CMDLINE)" \
 		-m 1G \
 		-nographic \
+		-chardev stdio,mux=on,id=char0,logfile=console.log,logappend=on \
+		-serial chardev:char0 \
+		-mon chardev=char0 \
 		-no-reboot \
 		$(QEMU_ARGS)
 
