@@ -36,7 +36,7 @@ demo-realtek:  ## boot our initramfs with another network card
 include ../Makefile.golang
 
 rand.bin: $(BIN_DIR)/rand$(BIN_SUFFIX)
-	$< | dd of=$@ bs=1M count=50 status=progress iflag=fullblock
+	$< | dd of=$@ bs=1M count=5000 status=progress iflag=fullblock
 
 .PHONY: dieharder
 dieharder: rand.bin  ## test our bespoke entropy generator
