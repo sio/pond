@@ -10,7 +10,9 @@ func Seed(buf []byte) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	nanos := make(chan int64)
-	go nanoGenerator(ctx, nanos)
+	for i := 0; i < 4; i++ {
+		go nanoGenerator(ctx, nanos)
+	}
 	var i int
 	for nano := range nanos {
 		for nano > 0xff {
