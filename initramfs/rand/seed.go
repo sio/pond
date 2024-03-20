@@ -6,35 +6,36 @@ import (
 )
 
 // Naive entropy seed. Uses time.Sleep jitter values.
+//
+// Dieharder tests show that this RNG's quality is abysmall.
+// Use only in non-critical deployments.
 func Seed(buf []byte) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	nanos := make(chan int64)
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 48; i++ {
 		go nanoGenerator(ctx, nanos)
 	}
 	var i int
 	for nano := range nanos {
-		for nano > 0xff {
-			if i >= len(buf) {
-				return
-			}
-
-			// Drop trailing zeroes (in case our timer is not granular enough)
-			for nano&1 == 0 {
-				nano = nano >> 1
-			}
-
-			// Drop the last bit because it's always 1, and the bit after that for no good reason
-			nano = nano >> 2
-
-			if nano < 0xff {
-				continue // Possibly contains meaningless leading zero bits
-			}
-
-			buf[i] = byte(nano & 0xff)
-			i++
+		if i >= len(buf) {
+			return
 		}
+
+		// Drop trailing zeroes (in case our timer is not granular enough)
+		for nano&1 == 0 {
+			nano = nano >> 1
+		}
+
+		// Drop the last bit because it's always 1, and the bit after that for no good reason
+		nano = nano >> 2
+
+		if nano < 0xff {
+			continue // Possibly contains meaningless leading zero bits
+		}
+
+		buf[i] = byte(nano & 0xff)
+		i++
 	}
 }
 
