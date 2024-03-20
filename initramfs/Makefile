@@ -40,4 +40,4 @@ rand.bin: $(BIN_DIR)/rand$(BIN_SUFFIX)
 
 .PHONY: dieharder
 dieharder: rand.bin  ## test our bespoke entropy generator
-	time dieharder -a -g 201 -f $< 2>&1 | tee $@.log
+	dieharder -a -g 201 -f $< 2>&1 | tee $@.log
