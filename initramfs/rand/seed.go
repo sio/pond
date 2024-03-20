@@ -58,7 +58,11 @@ func nanoGenerator(ctx context.Context, results chan<- int64) {
 			if jitter < 0 {
 				jitter *= -1
 			}
-			results <- jitter.Nanoseconds()
+			select {
+			case results <- jitter.Nanoseconds():
+			case <-ctx.Done():
+				return
+			}
 			delay = delta
 			if delay > step*13 {
 				delay = step
