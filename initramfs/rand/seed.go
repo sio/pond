@@ -12,8 +12,13 @@ import (
 func Seed(buf []byte) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	nanos := make(chan int64)
-	for i := 0; i < 48; i++ {
+	queue := len(buf)
+	const maxQueue = 48
+	if queue > maxQueue {
+		queue = maxQueue
+	}
+	nanos := make(chan int64, queue)
+	for i := 0; i < queue; i++ {
 		go nanoGenerator(ctx, nanos)
 	}
 	var i int
