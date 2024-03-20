@@ -23,7 +23,7 @@ func seedRandomGenerator() error {
 	}{}
 	rand.Seed(entropy.buf[:])
 	entropy.size = int64(len(entropy.buf))
-	entropy.bits = entropy.size * 8
+	entropy.bits = entropy.size * 8 // this is a severe overestimation, our RNG output does not contain 1:1 entropy
 
 	const RNDADDENTROPY = 0x40085203
 	_, _, errno := unix.Syscall(
