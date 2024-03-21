@@ -16,10 +16,13 @@ func Seed(buf []byte) {
 	for i := 0; i < 48; i++ {
 		go nanoGenerator(ctx, nanos)
 	}
-	var i int
+	var cursor, mask int
 	for nano := range nanos {
-		if i >= len(buf) {
+		if cursor >= len(buf) {
 			return
+		}
+		if mask == 0 {
+			buf[cursor] = 0
 		}
 
 		// Drop trailing zeroes (in case our timer is not granular enough)
@@ -34,10 +37,17 @@ func Seed(buf []byte) {
 			continue // Possibly contains meaningless leading zero bits
 		}
 
-		buf[i] = byte(nano & 0xff)
-		i++
+		buf[cursor] |= byte(nano) & masks[mask]
+
+		mask++
+		if mask >= len(masks) {
+			cursor++
+			mask = 0
+		}
 	}
 }
+
+var masks = [...]byte{0b10101010, 0b01010101}
 
 func nanoGenerator(ctx context.Context, results chan<- int64) {
 	var start time.Time
