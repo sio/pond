@@ -20,9 +20,12 @@ GOOS:=$(shell $(GO) env GOOS)
 GOPATH:=$(shell $(GO) env GOPATH)
 GOROOT:=$(shell $(GO) env GOROOT)
 
+LDD_CHECK?=&&
+ifdef GOBUILD_ALLOW_DYNLIBS
 LDD_CHECK=;
-ifdef GOBUILD_MUST_STATIC
-LDD_CHECK=&&
+endif
+ifndef CGO_ENABLED
+export CGO_ENABLED=0
 endif
 
 .PHONY: build
