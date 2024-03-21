@@ -16,38 +16,37 @@ func Seed(buf []byte) {
 	for i := 0; i < 48; i++ {
 		go nanoGenerator(ctx, nanos)
 	}
-	var cursor, mask int
-	for nano := range nanos {
-		if cursor >= len(buf) {
-			return
-		}
-		if mask == 0 {
-			buf[cursor] = 0
-		}
+	const (
+		mask         = 0b00001111
+		maskBits     = 4
+		masksPerByte = 2
+	)
+	for cursor := 0; cursor < len(buf); cursor++ {
+		buf[cursor] = 0
+		for chunk := 0; chunk < masksPerByte; {
+			nano, ok := <-nanos
+			if !ok {
+				panic("jitter generator channel is closed: this is a bug")
+			}
 
-		// Drop trailing zeroes (in case our timer is not granular enough)
-		for nano&1 == 0 {
-			nano = nano >> 1
-		}
+			// Drop trailing zeroes (in case our timer is not granular enough)
+			for nano&1 == 0 {
+				nano = nano >> 1
+			}
 
-		// Drop the last bit because it's always 1, and the bit after that for no good reason
-		nano = nano >> 2
+			// Drop the last bit because it's always 1, and the bit after that for no good reason
+			nano = nano >> (1 + chunk)
 
-		if nano < 0xff {
-			continue // Possibly contains meaningless leading zero bits
-		}
+			if nano < 0xff {
+				continue // Possibly contains meaningless leading zero bits
+			}
 
-		buf[cursor] |= byte(nano) & masks[mask]
-
-		mask++
-		if mask >= len(masks) {
-			cursor++
-			mask = 0
+			buf[cursor] <<= maskBits
+			buf[cursor] |= byte(nano) & mask
+			chunk++
 		}
 	}
 }
-
-var masks = [...]byte{0b10101010, 0b01010101}
 
 func nanoGenerator(ctx context.Context, results chan<- int64) {
 	var start time.Time
