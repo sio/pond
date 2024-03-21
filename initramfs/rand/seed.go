@@ -7,8 +7,14 @@ import (
 
 // Naive entropy seed. Uses time.Sleep jitter values.
 //
-// Dieharder tests show that this RNG's quality is abysmall.
-// Use only in non-critical deployments.
+// This RNG passes many (but not all) tests from dieharder suite, which is
+// impressive considering that author is a complete amateur in the field.
+// Use your own best judgement to decide whether this is good enough for your
+// use case.
+//
+// Run dieharder test suite with a 5GB input file (takes ~12 hours):
+//
+//	$ make dieharder
 func Seed(buf []byte) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
