@@ -1,0 +1,188 @@
+#=============================================================================#
+#            dieharder version 3.31.1 Copyright 2003 Robert G. Brown          #
+#=============================================================================#
+   rng_name    |           filename             |rands/second|
+ file_input_raw|                        rand.bin|  3.83e+07  |
+#=============================================================================#
+        test_name   |ntup| tsamples |psamples|  p-value |Assessment
+#=============================================================================#
+   diehard_birthdays|   0|       100|     100|0.76736803|  PASSED  
+      diehard_operm5|   0|   1000000|     100|0.96002426|  PASSED  
+  diehard_rank_32x32|   0|     40000|     100|0.89707493|  PASSED  
+    diehard_rank_6x8|   0|    100000|     100|0.23942157|  PASSED  
+   diehard_bitstream|   0|   2097152|     100|0.41711706|  PASSED  
+        diehard_opso|   0|   2097152|     100|0.97721058|  PASSED  
+        diehard_oqso|   0|   2097152|     100|0.75069080|  PASSED  
+         diehard_dna|   0|   2097152|     100|0.43550957|  PASSED  
+diehard_count_1s_str|   0|    256000|     100|0.54220574|  PASSED  
+diehard_count_1s_byt|   0|    256000|     100|0.64892895|  PASSED  
+ diehard_parking_lot|   0|     12000|     100|0.51803658|  PASSED  
+    diehard_2dsphere|   2|      8000|     100|0.32736726|  PASSED  
+    diehard_3dsphere|   3|      4000|     100|0.39804748|  PASSED  
+     diehard_squeeze|   0|    100000|     100|0.00839470|  PASSED  
+        diehard_sums|   0|       100|     100|0.24024737|  PASSED  
+        diehard_runs|   0|    100000|     100|0.26924452|  PASSED  
+        diehard_runs|   0|    100000|     100|0.86881944|  PASSED  
+       diehard_craps|   0|    200000|     100|0.25421016|  PASSED  
+       diehard_craps|   0|    200000|     100|0.26311262|  PASSED  
+# The file file_input_raw was rewound 2 times
+ marsaglia_tsang_gcd|   0|  10000000|     100|0.43201407|  PASSED  
+ marsaglia_tsang_gcd|   0|  10000000|     100|0.01565045|  PASSED  
+# The file file_input_raw was rewound 2 times
+         sts_monobit|   1|    100000|     100|0.00000000|  FAILED  
+# The file file_input_raw was rewound 2 times
+            sts_runs|   2|    100000|     100|0.00000000|  FAILED  
+# The file file_input_raw was rewound 2 times
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 2 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 3 times
+
+# The file file_input_raw was rewound 4 times
+
+# The file file_input_raw was rewound 4 times
+
+# The file file_input_raw was rewound 4 times
+
+# The file file_input_raw was rewound 5 times
+
+# The file file_input_raw was rewound 5 times
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 7 times
+
+# The file file_input_raw was rewound 8 times
+
+# The file file_input_raw was rewound 8 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 10 times
+
+# The file file_input_raw was rewound 11 times
+
+# The file file_input_raw was rewound 13 times
+
+# The file file_input_raw was rewound 14 times
+
+# The file file_input_raw was rewound 15 times
+
+# The file file_input_raw was rewound 16 times
+
+# The file file_input_raw was rewound 18 times
+
+# The file file_input_raw was rewound 19 times
+
+# The file file_input_raw was rewound 21 times
+
+# The file file_input_raw was rewound 23 times
+
+# The file file_input_raw was rewound 24 times
+
+# The file file_input_raw was rewound 26 times
+
+# The file file_input_raw was rewound 28 times
+
+# The file file_input_raw was rewound 30 times
+
+# The file file_input_raw was rewound 32 times
+
+# The file file_input_raw was rewound 34 times
+
+# The file file_input_raw was rewound 37 times
+
+# The file file_input_raw was rewound 39 times
+
+# The file file_input_raw was rewound 41 times
+
+# The file file_input_raw was rewound 44 times
+
+# The file file_input_raw was rewound 46 times
+
+# The file file_input_raw was rewound 46 times
+
+# The file file_input_raw was rewound 46 times
+
+# The file file_input_raw was rewound 46 times
+
+# The file file_input_raw was rewound 46 times
+Preparing to run test 207.  ntuple = 0
+
+
+# The file file_input_raw was rewound 46 times
+Preparing to run test 208.  ntuple = 0
+
+
+# The file file_input_raw was rewound 47 times
+Preparing to run test 209.  ntuple = 0
+
