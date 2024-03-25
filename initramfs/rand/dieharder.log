@@ -1,0 +1,156 @@
+# This dieharder run was performed against 2 GB of data generated
+# by updated algorithm.
+# Since the results do not look promising, I will not wait until full
+# 5 GB are generated.
+#
+#=============================================================================#
+#            dieharder version 3.31.1 Copyright 2003 Robert G. Brown          #
+#=============================================================================#
+   rng_name    |           filename             |rands/second|
+ file_input_raw|                rand-decimal.bin|  5.74e+07  |
+#=============================================================================#
+        test_name   |ntup| tsamples |psamples|  p-value |Assessment
+#=============================================================================#
+   diehard_birthdays|   0|       100|     100|0.29689598|  PASSED
+      diehard_operm5|   0|   1000000|     100|0.90583666|  PASSED
+  diehard_rank_32x32|   0|     40000|     100|0.25227921|  PASSED
+    diehard_rank_6x8|   0|    100000|     100|0.00000000|  FAILED
+   diehard_bitstream|   0|   2097152|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+        diehard_opso|   0|   2097152|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+        diehard_oqso|   0|   2097152|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+         diehard_dna|   0|   2097152|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+diehard_count_1s_str|   0|    256000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+diehard_count_1s_byt|   0|    256000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 1 times
+ diehard_parking_lot|   0|     12000|     100|0.00040113|   WEAK
+# The file file_input_raw was rewound 1 times
+    diehard_2dsphere|   2|      8000|     100|0.21396525|  PASSED
+# The file file_input_raw was rewound 1 times
+    diehard_3dsphere|   3|      4000|     100|0.74133454|  PASSED
+# The file file_input_raw was rewound 2 times
+     diehard_squeeze|   0|    100000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 2 times
+        diehard_sums|   0|       100|     100|0.01327846|  PASSED
+# The file file_input_raw was rewound 2 times
+        diehard_runs|   0|    100000|     100|0.35116237|  PASSED
+        diehard_runs|   0|    100000|     100|0.28205381|  PASSED
+# The file file_input_raw was rewound 2 times
+       diehard_craps|   0|    200000|     100|0.00000000|  FAILED
+       diehard_craps|   0|    200000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 6 times
+ marsaglia_tsang_gcd|   0|  10000000|     100|0.00000000|  FAILED
+ marsaglia_tsang_gcd|   0|  10000000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 6 times
+         sts_monobit|   1|    100000|     100|0.00000000|  FAILED
+# The file file_input_raw was rewound 6 times
+            sts_runs|   2|    100000|     100|0.00017301|   WEAK
+# The file file_input_raw was rewound 6 times
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 6 times
+
+# The file file_input_raw was rewound 7 times
+
+# The file file_input_raw was rewound 7 times
+
+# The file file_input_raw was rewound 7 times
+
+# The file file_input_raw was rewound 7 times
+
+# The file file_input_raw was rewound 8 times
+
+# The file file_input_raw was rewound 8 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 9 times
+
+# The file file_input_raw was rewound 10 times
+
+# The file file_input_raw was rewound 10 times
+
+# The file file_input_raw was rewound 10 times
+
+# The file file_input_raw was rewound 10 times
+
+# The file file_input_raw was rewound 11 times
+
+# The file file_input_raw was rewound 12 times
+
+# The file file_input_raw was rewound 13 times
+
+# The file file_input_raw was rewound 14 times
+
+# The file file_input_raw was rewound 15 times
+
+# The file file_input_raw was rewound 17 times
+
+# The file file_input_raw was rewound 19 times
+
+# The file file_input_raw was rewound 20 times
+
+# The file file_input_raw was rewound 23 times
+
+# The file file_input_raw was rewound 25 times
+
+# The file file_input_raw was rewound 28 times
+
+# The file file_input_raw was rewound 30 times
+
+# The file file_input_raw was rewound 33 times
+
+# The file file_input_raw was rewound 36 times
+
+# The file file_input_raw was rewound 40 times
+

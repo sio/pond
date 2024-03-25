@@ -23,9 +23,9 @@ func Seed(buf []byte) {
 		go nanoGenerator(ctx, nanos)
 	}
 	const (
-		mask         = 0b00001111
-		maskBits     = 4
-		masksPerByte = 2
+		mask         = 0b01001001
+		maskShift    = 1
+		masksPerByte = 3
 	)
 	for cursor := 0; cursor < len(buf); cursor++ {
 		buf[cursor] = 0
@@ -35,19 +35,18 @@ func Seed(buf []byte) {
 				panic("jitter generator channel is closed: this is a bug")
 			}
 
-			// Drop trailing zeroes (in case our timer is not granular enough)
-			for nano&1 == 0 {
-				nano = nano >> 1
+			// Drop trailing decimal zeroes (in case our timer is not granular enough)
+			for nano%10 == 0 {
+				nano /= 10
 			}
+			nano /= 10 // last decimal digit is not entirely random (it's never zero), so we drop it
 
-			// Drop the last bit because it's always 1, and the bit after that for no good reason
-			nano = nano >> (1 + chunk)
-
+			// Check that we have enough meaningful bits left
 			if nano < 0xff {
-				continue // Possibly contains meaningless leading zero bits
+				continue
 			}
 
-			buf[cursor] <<= maskBits
+			buf[cursor] <<= maskShift
 			buf[cursor] |= byte(nano) & mask
 			chunk++
 		}
@@ -57,7 +56,7 @@ func Seed(buf []byte) {
 func nanoGenerator(ctx context.Context, results chan<- int64) {
 	var start time.Time
 	var delta, delay, jitter time.Duration
-	const step time.Duration = 11579 // nanoseconds = 11us; best case 1byte/11us = 84KB/s = 21k int32/s
+	const step time.Duration = 10000
 	delay = step
 	for {
 		start = time.Now()
