@@ -17,3 +17,6 @@ See [components.dot](components.dot) for an overview of what our initramfs does.
 - Use a mutex when writing to stdout: do not output log messages when an
   interactive menu is in use. Save logs to bytes.Buffer to unblock callers
   immediately, and flush to stdout after user closes the menu.
+- Compressing binaries with UPX prior to including them into initramfs is
+  meaningless because we will later compress initramfs archive with zstd
+  anyways. Total image size reduction is close to zero.
