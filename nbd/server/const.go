@@ -5,6 +5,11 @@ import "fmt"
 // NBD protocol description:
 //	https://github.com/NetworkBlockDevice/nbd/blob/f8d7d3dbf1ef2ef84c92fe375ebc8674a79e25c2/doc/proto.md
 
+const (
+	NBDMAGIC uint64 = 0x4e42444d41474943
+	IHAVEOPT uint64 = 0x49484156454F5054
+)
+
 type handshakeFlag uint16
 
 func (f handshakeFlag) String() string {
