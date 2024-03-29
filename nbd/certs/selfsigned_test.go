@@ -39,9 +39,7 @@ func TestSelfSigned(t *testing.T) {
 	}
 
 	// Save cert for further inspection
-	if !experimentsEnabled() {
-		return
-	}
+	experimental(t)
 	temp, err := os.CreateTemp("", "selfsigned")
 	if err != nil {
 		t.Fatalf("CreateTemp: %v", err)
