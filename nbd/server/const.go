@@ -42,7 +42,7 @@ func (o optionType) String() string {
 
 const (
 	NBD_OPT_EXPORT_NAME      optionType = 1
-	NBD_OPT_ABORD            optionType = 2
+	NBD_OPT_ABORT            optionType = 2
 	NBD_OPT_LIST             optionType = 3
 	NBD_OPT_STARTTLS         optionType = 5
 	NBD_OPT_INFO             optionType = 6

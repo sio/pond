@@ -83,6 +83,7 @@ func (s *Server) ListenShutdown(sig ...os.Signal) {
 	for interrupt := range ch {
 		log.Printf("Initiating graceful shutdown due to %s", interrupt)
 		s.Shutdown()
+		return
 	}
 }
 
@@ -92,6 +93,8 @@ func (s *Server) Shutdown() {
 		select {
 		case <-s.ctx.Done():
 		case <-time.After(gracefulShutdownTimeout):
+			s.cancel()
+			time.Sleep(time.Second)
 			log.Fatalf("Graceful shutdown took longer than %s, crashing hard", gracefulShutdownTimeout)
 		}
 	}()
