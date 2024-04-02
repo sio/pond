@@ -13,10 +13,10 @@ func discard(r io.Reader, n int) error {
 			end = cap(discardBuf)
 		}
 		done, err := r.Read(discardBuf[:end])
-		if done != end && err != nil {
+		n -= done
+		if err != nil && n != 0 {
 			return err
 		}
-		n -= done
 	}
 	return nil
 }
