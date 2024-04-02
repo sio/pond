@@ -71,7 +71,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 	reply := func(t optionType, r optionReply, data ...any) error {
 		var d []byte
 		if len(data) != 0 {
-			buf := buffer.Get().([]byte)
+			buf := buffer.Get().([]byte)[:0]
 			defer buffer.Put(buf)
 			payload := &byteWriter{buf: buf}
 			err := send(payload, data...)
@@ -218,7 +218,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 }
 
 func negotiateBackend(conn io.ReadWriter, export func(name string) (Backend, error), size uint32) (Backend, error) {
-	buf := buffer.Get().([]byte)
+	buf := buffer.Get().([]byte)[:0]
 	defer buffer.Put(buf)
 
 	payloadLen := int(size)
