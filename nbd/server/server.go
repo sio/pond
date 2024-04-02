@@ -13,13 +13,14 @@ import (
 	"time"
 )
 
-func New(ctx context.Context, export func(name string) (io.ReaderAt, error)) *Server {
-	ctx, cancel := context.WithCancel(ctx)
-	return &Server{
-		export: export,
-		ctx:    ctx,
-		cancel: cancel,
-	}
+// Actual storage interaction happens through this object
+type Backend = io.ReaderAt
+
+func New(ctx context.Context, export func(name string) (Backend, error)) *Server {
+	s := &Server{export: export}
+	s.ctxStrict, s.cancelStrict = context.WithCancelCause(ctx)
+	s.ctxSoft, s.cancelSoft = context.WithCancelCause(s.ctxStrict)
+	return s
 }
 
 const (
@@ -28,18 +29,16 @@ const (
 )
 
 type Server struct {
-	export   func(name string) (io.ReaderAt, error)
-	ctx      context.Context
-	cancel   context.CancelFunc
-	shutdown bool
-	wg       sync.WaitGroup
-	err      error
+	export                   func(name string) (Backend, error)
+	ctxSoft, ctxStrict       context.Context
+	cancelSoft, cancelStrict context.CancelCauseFunc
+	wg                       sync.WaitGroup
 }
 
 // Listen for incoming NBD connections indefinitely
 func (s *Server) Listen(network, address string) error {
 	tcp := &net.ListenConfig{}
-	l, err := tcp.Listen(s.ctx, network, address)
+	l, err := tcp.Listen(s.ctxStrict, network, address)
 	if err != nil {
 		return err
 	}
@@ -49,12 +48,11 @@ func (s *Server) Listen(network, address string) error {
 		return fmt.Errorf("%T does not support deadline", l)
 	}
 	for {
-		if s.shutdown {
-			return s.err
-		}
 		select {
-		case <-s.ctx.Done():
-			return s.ctx.Err()
+		case <-s.ctxSoft.Done():
+			return context.Cause(s.ctxSoft)
+		case <-s.ctxStrict.Done():
+			return context.Cause(s.ctxStrict)
 		default:
 		}
 		err = listener.SetDeadline(time.Now().Add(connAcceptTimeout))
@@ -91,16 +89,16 @@ func (s *Server) ListenShutdown(sig ...os.Signal) {
 func (s *Server) Shutdown() {
 	go func() {
 		select {
-		case <-s.ctx.Done():
+		case <-s.ctxStrict.Done():
 		case <-time.After(gracefulShutdownTimeout):
-			s.cancel()
+			s.cancelStrict(NBD_ESHUTDOWN)
 			time.Sleep(time.Second)
 			log.Fatalf("Graceful shutdown took longer than %s, crashing hard", gracefulShutdownTimeout)
 		}
 	}()
-	s.shutdown = true // do not accept new connections and commands
-	s.wg.Wait()       // handle all outstanding requests
-	s.cancel()        // drop everything
+	s.cancelSoft(NBD_ESHUTDOWN)   // do not accept new connections and commands
+	s.wg.Wait()                   // handle all outstanding requests
+	s.cancelStrict(NBD_ESHUTDOWN) // drop everything
 }
 
 type deadlineListener interface {

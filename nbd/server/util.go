@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -24,3 +25,22 @@ func discard(r io.Reader, n int) error {
 // Data races and spontaneous overwriting does not bother us.
 // Never read data from this buffer!
 var discardBuf [4096]byte
+
+// Simple io.Writer interface for a byte slice.
+// Does not capture and mangle the slice like bytes.Buffer does.
+type byteWriter struct {
+	buf []byte
+}
+
+func (w *byteWriter) Write(p []byte) (n int, err error) {
+	n = copy(w.buf[len(w.buf):cap(w.buf)], p)
+	w.buf = w.buf[:len(w.buf)+n]
+	if n != len(p) {
+		return n, fmt.Errorf("buffer full")
+	}
+	return n, nil
+}
+
+func (w *byteWriter) Bytes() []byte {
+	return w.buf
+}

@@ -77,6 +77,19 @@ const (
 	NBD_REP_ERR_EXT_HEADER_REQD optionReply = nbd_rep_error + 10
 )
 
+type infoType uint16
+
+func (i infoType) String() string {
+	return fmt.Sprintf("NBD export info (type %d)", i)
+}
+
+const (
+	NBD_INFO_EXPORT      infoType = 0
+	NBD_INFO_NAME        infoType = 1
+	NBD_INFO_DESCRIPTION infoType = 2
+	NBD_INFO_BLOCK_SIZE  infoType = 3
+)
+
 type replyFlag uint16
 
 func (f replyFlag) String() string {
