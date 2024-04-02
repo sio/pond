@@ -10,8 +10,7 @@ import (
 // Type assertion in Go is pretty fast (~20ns/3)
 // so there is no reason to cache the converted value
 func BenchmarkTypeAssertion(b *testing.B) {
-	var object any
-	object = os.Stderr
+	var object any = os.Stderr
 	for i := 0; i < b.N; i++ {
 		var got [3]bool
 		_, got[0] = object.(io.ReaderAt)
