@@ -6,8 +6,10 @@ import "fmt"
 //	https://github.com/NetworkBlockDevice/nbd/blob/f8d7d3dbf1ef2ef84c92fe375ebc8674a79e25c2/doc/proto.md
 
 const (
-	NBDMAGIC uint64 = 0x4e42444d41474943
-	IHAVEOPT uint64 = 0x49484156454F5054
+	NBDMAGIC               uint64 = 0x4e42444d41474943
+	IHAVEOPT               uint64 = 0x49484156454F5054
+	NBD_REQUEST_MAGIC      uint32 = 0x25609513
+	NBD_SIMPLE_REPLY_MAGIC uint32 = 0x67446698
 )
 
 type handshakeFlag uint16
@@ -122,6 +124,7 @@ func (r requestType) String() string {
 
 const (
 	NBD_CMD_READ  requestType = 0
+	NBD_CMD_WRITE requestType = 1
 	NBD_CMD_DISC  requestType = 2
 	NBD_CMD_CACHE requestType = 5
 )

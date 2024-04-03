@@ -33,7 +33,7 @@ func receive(conn io.Reader, into ...any) error {
 	return nil
 }
 
-// Start NBD conversation
+// NBD Handshake Phase
 func handshake(conn io.ReadWriter) error {
 	var hello = struct {
 		magic  uint64
@@ -65,7 +65,7 @@ func handshake(conn io.ReadWriter) error {
 	return nil
 }
 
-// NBD protocol: negotiation phase
+// NBD Negotiation Phase
 func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string) (Backend, error)) (Backend, error) {
 	reply := func(t optionType, r optionReply, data ...any) error {
 		var d []byte
@@ -188,6 +188,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 	}
 }
 
+// Negotiate NBD export with client
 func negotiateBackend(conn io.ReadWriter, export func(name string) (Backend, error), size uint32) (Backend, error) {
 	buf := buffer.Get()
 	defer buffer.Put(buf)

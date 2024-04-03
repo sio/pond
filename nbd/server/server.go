@@ -136,5 +136,9 @@ func (s *Server) serveNBD(conn net.Conn) error {
 		return nbd.Errorf("negotiation: %w", err)
 	}
 	defer nbd.Close()
+	err = transmission(s.ctxSoft, nbd, nbd.backend)
+	if err != nil {
+		return nbd.Errorf("transmission: %w", err)
+	}
 	return nil
 }
