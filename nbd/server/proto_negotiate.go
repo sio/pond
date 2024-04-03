@@ -97,7 +97,6 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 		)
 	}
 
-	allow_structured_reply := false
 	for {
 		var option struct {
 			Magic uint64
@@ -160,15 +159,6 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 				return nil, fmt.Errorf("NBD_INFO_EXPORT: %w", err)
 			}
 
-			// Require structured replies (violates NBD protocol spec)
-			if option.Type == NBD_OPT_GO && !allow_structured_reply {
-				err = reply(option.Type, NBD_REP_ERR_POLICY, []byte("structured replies must be enabled"))
-				if err != nil {
-					return nil, err
-				}
-				continue
-			}
-
 			// Finish successfully
 			err = reply(option.Type, NBD_REP_ACK, nil)
 			if err != nil {
@@ -185,24 +175,6 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 		case NBD_OPT_ABORT:
 			_ = reply(option.Type, NBD_REP_ACK, nil)
 			return nil, fmt.Errorf("client desired to end the negotiation")
-
-		case NBD_OPT_STRUCTURED_REPLY:
-			if option.Len != 0 {
-				err = reply(option.Type, NBD_REP_ERR_INVALID, nil)
-				if err != nil {
-					return nil, err
-				}
-				err = discard(conn, int(option.Len))
-				if err != nil {
-					return nil, err
-				}
-				continue
-			}
-			allow_structured_reply = true
-			err = reply(option.Type, NBD_REP_ACK, nil)
-			if err != nil {
-				return nil, err
-			}
 
 		default: // all other options are not supported; ignore
 			err = discard(conn, int(option.Len))
