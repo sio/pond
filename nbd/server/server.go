@@ -122,31 +122,35 @@ type deadlineListener interface {
 func (s *Server) handleConnection(conn net.Conn) {
 	s.conn.Add(1)
 	defer s.conn.Done()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
+
+	addr := conn.RemoteAddr()
+	client := fmt.Sprintf("%s://%s: ", addr.Network(), addr.String())
 
 	err := s.serveNBD(conn)
 	if err != nil {
-		log.Println("Disconnect on failure:", err)
+		log.Printf("%s: disconnect on failure: %v", client, err)
 		return
 	}
-	log.Println("Disconnect on success:", conn.RemoteAddr())
+	log.Printf("%s: disconnect on success", client)
 }
 
 // Speak NBD protocol over a single TCP/TLS connection
 func (s *Server) serveNBD(conn net.Conn) error {
-	nbd := &nbdConn{Conn: conn}
-	err := handshake(nbd)
+	err := handshake(conn)
 	if err != nil {
-		return nbd.Errorf("handshake: %w", err)
+		return fmt.Errorf("handshake: %w", err)
 	}
-	nbd.backend, err = negotiate(s.ctxSoft, nbd, s.export)
+	backend, err := negotiate(s.ctxSoft, conn, s.export)
 	if err != nil {
-		return nbd.Errorf("negotiation: %w", err)
+		return fmt.Errorf("negotiation: %w", err)
 	}
-	defer nbd.Close()
-	err = transmission(s.ctxSoft, nbd, nbd.backend)
+	if b, ok := backend.(io.Closer); ok {
+		defer func() { _ = b.Close() }()
+	}
+	err = transmission(s.ctxSoft, conn, backend)
 	if err != nil {
-		return nbd.Errorf("transmission: %w", err)
+		return fmt.Errorf("transmission: %w", err)
 	}
 	return nil
 }
