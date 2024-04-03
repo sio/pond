@@ -1,4 +1,12 @@
 // Read-only NBD server
+//
+// This server was implemented for a very narrow usage scenario.
+// Be careful when attempting to use it outside of pond/nbd project: this
+// implementation omits several key features of NBD protocol spec, violates
+// multiple protocol requirements and even sends bogus data to client in some
+// cases.
+//
+// You have been warned!
 package server
 
 import (
