@@ -6,7 +6,7 @@ import (
 )
 
 // Memory buffers of this size will be frequently used by our NBD server
-const BufferSize = 4096
+const BufferSize = 64 << 10
 
 // Reusable byte slice pool
 //
