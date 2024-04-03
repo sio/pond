@@ -156,6 +156,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 			if err != nil {
 				return nil, fmt.Errorf("NBD_INFO_EXPORT: %w", err)
 			}
+			// TODO: send NBD_INFO_BLOCK_SIZE with prefered block size = BufferSize
 
 			// Finish successfully
 			err = reply(option.Type, NBD_REP_ACK, nil)

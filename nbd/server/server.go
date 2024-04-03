@@ -33,7 +33,7 @@ type Server struct {
 	export                   func(name string) (Backend, error)
 	ctxSoft, ctxStrict       context.Context
 	cancelSoft, cancelStrict context.CancelCauseFunc
-	wg                       sync.WaitGroup
+	conn                     sync.WaitGroup
 }
 
 // Listen for incoming NBD connections indefinitely
@@ -98,11 +98,43 @@ func (s *Server) Shutdown() {
 		}
 	}()
 	s.cancelSoft(NBD_ESHUTDOWN)   // do not accept new connections and commands
-	s.wg.Wait()                   // handle all outstanding requests
+	s.conn.Wait()                 // handle all established client connections
 	s.cancelStrict(NBD_ESHUTDOWN) // drop everything
 }
 
 type deadlineListener interface {
 	net.Listener
 	SetDeadline(time.Time) error
+}
+
+// Service a single client connection.
+//
+// Unlike with other common layer 7 protocols (like HTTP) these connections are
+// very long lived.
+func (s *Server) handleConnection(conn net.Conn) {
+	s.conn.Add(1)
+	defer s.conn.Done()
+	defer conn.Close()
+
+	err := s.serveNBD(conn)
+	if err != nil {
+		log.Println("Disconnect on failure:", err)
+		return
+	}
+	log.Println("Disconnect on success:", conn.RemoteAddr())
+}
+
+// Speak NBD protocol over a single TCP/TLS connection
+func (s *Server) serveNBD(conn net.Conn) error {
+	nbd := &nbdConn{Conn: conn}
+	err := handshake(nbd)
+	if err != nil {
+		return nbd.Errorf("handshake: %w", err)
+	}
+	nbd.backend, err = negotiate(s.ctxSoft, nbd, s.export)
+	if err != nil {
+		return nbd.Errorf("negotiation: %w", err)
+	}
+	defer nbd.Close()
+	return nil
 }
