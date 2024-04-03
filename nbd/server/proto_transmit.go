@@ -50,7 +50,6 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 			return context.Cause(ctx)
 		case cmd = <-commands:
 		}
-		log.Println("New command:", cmd)
 		if cmd.Magic != NBD_REQUEST_MAGIC {
 			return fmt.Errorf("invalid NBD_REQUEST_MAGIC: got %x, want %x", cmd.Magic, NBD_REQUEST_MAGIC)
 		}

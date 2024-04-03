@@ -16,7 +16,7 @@ func main() {
 	log.Println(exe)
 	s := server.New(context.Background(), func(name string) (server.Backend, error) {
 		log.Printf("exportFunc: client requested export name: %q\n", name)
-		return os.Open("Makefile")
+		return os.Open("/dev/urandom")
 	})
 	go s.ListenShutdown()
 	e := s.Listen("tcp", "127.0.0.189:10809")
