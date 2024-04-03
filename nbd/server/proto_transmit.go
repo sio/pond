@@ -85,16 +85,44 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 					}
 					n, ioerr := backend.ReadAt(buf, cur)
 					cur += int64(n)
+					/**
+
+					TRUTH TABLE FOR WHAT HAPPENS NEXT
+
+					.-------.---------------.------.-----------------------.
+					| ioerr | inTransaction |  n   |    (Order) Action     |
+					:-------+---------------+------+-----------------------:
+					| error | no            | 0    | (1) NBD_EIO           |
+					:-------+---------------+------+-----------------------:
+					| error | yes           | 0    | (2) ioErrors++        |
+					:-------+---------------+------+-----------------------:
+					| nil   | no            | some | (3) Begin transaction |
+					:-------+---------------+------+-----------------------:
+					| error | no            | some | (3) Begin transaction |
+					:-------+---------------+------+-----------------------:
+					| nil   | yes           | some | (4) Send data         |
+					:-------+---------------+------+-----------------------:
+					| error | yes           | some | (4) Send data         |
+					:-------+---------------+------+-----------------------:
+					| nil   | no            | 0    | ( ) noop              |
+					:-------+---------------+------+-----------------------:
+					| nil   | yes           | 0    | ( ) noop              |
+					'-------'---------------'------'-----------------------'
+					**/
 					if ioerr == nil {
 						ioErrors = 0 // reset error counter
 					}
-					if ioerr != nil && !inTransaction {
+
+					// (1) NBD_EIO
+					if ioerr != nil && !inTransaction && n == 0 {
 						err := sendError(cmd.Cookie, NBD_EIO)
 						if err != nil {
 							cancel(fmt.Errorf("backend error (%w) followed by connection error (%w)", ioerr, err))
 						}
 						return
 					}
+
+					// (2) ioErrors++
 					if ioerr != nil && n == 0 {
 						ioErrors++
 						const ioErrorsThreshold = 30
@@ -127,6 +155,8 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 							return
 						}
 					}
+
+					// (3) Begin transaction
 					if !inTransaction && n != 0 {
 						write.Lock()
 						defer write.Unlock()
@@ -141,6 +171,8 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 						}
 						inTransaction = true
 					}
+
+					// (4) Send data
 					err = send(conn, buf[:n])
 					if err != nil {
 						cancel(fmt.Errorf("NBD_CMD_READ: send data: %w", err))
