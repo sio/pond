@@ -178,8 +178,8 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 				return backend, nil
 			}
 
-		case NBD_OPT_EXPORT_NAME: // intentionally not supported; drop connection
-			_ = reply(option.Type, NBD_REP_ERR_UNSUP, nil)
+		case NBD_OPT_EXPORT_NAME: // not supported; drop connection (violates NBD protocol spec)
+			_ = reply(option.Type, NBD_REP_ERR_POLICY, []byte("this server requires fixed newstyle negotiation"))
 			return nil, fmt.Errorf("client attempted non-fixed newstyle negotiation")
 
 		case NBD_OPT_ABORT:
