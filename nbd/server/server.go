@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -74,7 +75,7 @@ func (s *Server) Listen(network, address string) error {
 // Listen for OS signals to initiate graceful shutdown
 func (s *Server) ListenShutdown(sig ...os.Signal) {
 	if len(sig) == 0 {
-		return
+		sig = []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 	}
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, sig...)

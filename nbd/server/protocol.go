@@ -21,6 +21,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 		log.Println(err)
 		return
 	}
+	defer nbd.Close()
 	log.Println("Negotiation OK:", nbd)
 }
 

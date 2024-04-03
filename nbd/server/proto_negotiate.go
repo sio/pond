@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 )
 
 // Send arbitrary objects over given connection
@@ -117,7 +116,6 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 		default:
 		}
 
-		log.Printf("got option: %v", option)
 		switch option.Type {
 
 		case NBD_OPT_GO, NBD_OPT_INFO:
