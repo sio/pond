@@ -125,7 +125,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 
 	addr := conn.RemoteAddr()
-	client := fmt.Sprintf("%s://%s: ", addr.Network(), addr.String())
+	client := fmt.Sprintf("%s://%s", addr.Network(), addr.String())
 
 	err := s.serveNBD(conn)
 	if err != nil {

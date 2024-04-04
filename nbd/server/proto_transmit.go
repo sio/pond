@@ -67,6 +67,7 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 		case NBD_CMD_READ:
 			request.Add(1)
 			go func(cmd requestHeader) {
+				//log.Printf("read request %#x+%db", cmd.Offset, cmd.Len)
 				defer request.Done()
 
 				buf := buffer.Get()
@@ -83,7 +84,6 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 						buf = buf[:int(end-cur)]
 					}
 					n, ioerr := backend.ReadAt(buf, cur)
-					cur += int64(n)
 					/**
 
 					TRUTH TABLE FOR WHAT HAPPENS NEXT
@@ -122,7 +122,7 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 					}
 
 					// (2) ioErrors++
-					if ioerr != nil && n == 0 {
+					if ioerr != nil && inTransaction && n == 0 {
 						ioErrors++
 						const ioErrorsThreshold = 30
 						if ioErrors > ioErrorsThreshold {
@@ -138,20 +138,9 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 							//
 							// We rely on data integrity verification being implemented on
 							// top of our block device (dm-verity, zfs, btrfs)
-							var bogusData = [...]byte{0xee, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee}
-							buf = bogusData[:]
-							for cur < end {
-								if (end - cur) < int64(len(buf)) {
-									buf = buf[:int(end-cur)]
-								}
-								cur += int64(len(buf))
-								err := send(conn, buf)
-								if err != nil {
-									cancel(fmt.Errorf("NBD_CMD_READ: too many i/o errors (%w); sending bogus data: %w", ioerr, err))
-									return
-								}
+							for n < len(buf) {
+								n += copy(buf[n:], bogusData[:])
 							}
-							return
 						}
 					}
 
@@ -172,6 +161,7 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 					}
 
 					// (4) Send data
+					cur += int64(n)
 					err = send(conn, buf[:n])
 					if err != nil {
 						cancel(fmt.Errorf("NBD_CMD_READ: send data: %w", err))
@@ -218,3 +208,8 @@ type replyHeader struct {
 	Error  nbdError
 	Cookie clientCookie
 }
+
+// Searchable bogus data (0xEEE0E1E2E3E4E5E6E7E8E9EAEBECEDEE in a loop) that we
+// send to client when we have no other choice other than this (violates NBD protocol spec)
+// or severing TCP connection.
+var bogusData = [...]byte{0xee, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee}
