@@ -147,11 +147,15 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 				flag transmissionFlag
 			}{
 				info: NBD_INFO_EXPORT,
-				size: 1 << 60, // TODO: pass real export size here somehow?
 				flag: NBD_FLAG_HAS_FLAGS |
 					NBD_FLAG_READ_ONLY |
 					NBD_FLAG_CAN_MULTI_CONN |
 					NBD_FLAG_SEND_CACHE,
+				// Use an obviously bogus number for export size to make sure
+				// no one confuses it for a real one.
+				// Value of one exabyte also shows up nicely as 1E in lsblk
+				// hinting that it might be an (E)rror.
+				size: 1 << 60, // TODO: pass real export size here somehow?
 			})
 			if err != nil {
 				return nil, fmt.Errorf("NBD_INFO_EXPORT: %w", err)
