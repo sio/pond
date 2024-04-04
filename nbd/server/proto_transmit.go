@@ -37,7 +37,12 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 				cancel(fmt.Errorf("receive command: %w", err))
 				return
 			}
-			commands <- cmd
+			select {
+			case commands <- cmd:
+				// continue to receive next command
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 	defer log.Println("Exit transmission:", conn)
