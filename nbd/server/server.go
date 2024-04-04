@@ -87,10 +87,15 @@ func (s *Server) ListenShutdown(sig ...os.Signal) {
 	}
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, sig...)
-	for interrupt := range ch {
-		log.Printf("Initiating graceful shutdown due to %s", interrupt)
-		s.Shutdown()
-		return
+	for {
+		select {
+		case interrupt := <-ch:
+			log.Printf("Initiating graceful shutdown due to %s", interrupt)
+			s.Shutdown()
+			return
+		case <-s.ctxStrict.Done():
+			return
+		}
 	}
 }
 
