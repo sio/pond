@@ -75,6 +75,7 @@ ci: lint test bench-quick build
 
 .PHONY: test test-verbose
 test:  ## run automated tests
+GOTEST_ARGS+=-shuffle=on
 test-verbose:  ## run tests with increased verbosity
 test-verbose: GOTEST_ARGS+=-v --count=1
 test test-verbose: go.sum
