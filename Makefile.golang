@@ -143,7 +143,6 @@ loc: $(CLOC)  ## count lines of code
 .PHONY: upx
 UPX_TOOL?=upx
 UPX?=--best --lzma
-export UPX
 upx: $(EXE)  ## compress executables with upx
 ifneq ($(strip $(EXE)),)
 	$(UPX_TOOL) $(UPX) $(EXE)
