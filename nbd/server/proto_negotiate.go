@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+
+	"github.com/sio/pond/nbd/buffer"
 )
 
 // Send arbitrary objects over given connection
@@ -119,7 +121,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 		switch option.Type {
 
 		case NBD_OPT_GO, NBD_OPT_INFO:
-			if option.Len > BufferSize {
+			if option.Len > buffer.Size {
 				err = discard(conn, int(option.Len))
 				if err != nil {
 					return nil, err

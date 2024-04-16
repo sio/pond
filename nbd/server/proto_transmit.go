@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"sync"
+
+	"github.com/sio/pond/nbd/buffer"
 )
 
 // NBD Transmission Phase
