@@ -1,6 +1,8 @@
 module github.com/sio/pond/nbd
 
-go 1.20
+go 1.21
+
+toolchain go1.22.2
 
 require (
 	github.com/minio/minio-go/v7 v7.0.69
