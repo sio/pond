@@ -92,21 +92,23 @@ func randomDir(t *testing.T) string {
 		t.Fatalf("create temp directory: %v", err)
 	}
 	t.Cleanup(func() {
-		d := directory
-		_ = os.RemoveAll(d)
+		err = os.RemoveAll(directory)
+		if err != nil {
+			t.Fatalf("remove %s: %v", directory, err)
+		}
 	})
 
-	directory = filepath.Join(directory, "data")
+	datadir := filepath.Join(directory, "data")
 	for _, size := range []int64{10 << 10, 10 << 20, 20 << 20, 100 << 20} {
 		err := randomFile(
-			filepath.Join(directory, "garbage", filesize(size)),
+			filepath.Join(datadir, "garbage", filesize(size)),
 			size,
 		)
 		if err != nil {
 			t.Fatalf("create file with random data: %v", err)
 		}
 	}
-	return directory
+	return datadir
 }
 
 func randomFile(path string, size int64) error {
