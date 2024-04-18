@@ -36,6 +36,7 @@ func (d *BlockDeviceData) fill() {
 		}
 		lba0 := make([]byte, 512)
 		n, err := disk.Read(lba0)
+		_ = disk.Close()
 		if err != nil {
 			continue
 		}

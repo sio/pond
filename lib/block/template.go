@@ -131,6 +131,7 @@ func (t *Template) Render(filepath string) error {
 	if err != nil {
 		return err
 	}
+	defer func() { _ = file.Close() }()
 	err = file.Truncate(0)
 	if err != nil {
 		return err
