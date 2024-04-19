@@ -35,25 +35,50 @@ func (q *Queue) Close() error {
 
 // Calling Release() without previously calling Acquire() or
 // AcquireLowPriority() will result in dead lock.
-func (q *Queue) Release() {
-	<-q.global
+func (q *Queue) Release() error {
+	select {
+	case <-q.global:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
+	}
 	select {
 	case <-q.normal:
-		return
+		return nil
 	default:
 	}
 	select {
 	case <-q.normal:
 	case <-q.low:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
 	}
+	return nil
 }
 
-func (q *Queue) Acquire() {
-	q.normal <- struct{}{}
-	q.global <- struct{}{}
+func (q *Queue) Acquire() error {
+	select {
+	case q.normal <- struct{}{}:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
+	}
+	select {
+	case q.global <- struct{}{}:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
+	}
+	return nil
 }
 
-func (q *Queue) AcquireLowPriority() {
-	q.low <- struct{}{}
-	q.global <- struct{}{}
+func (q *Queue) AcquireLowPriority() error {
+	select {
+	case q.low <- struct{}{}:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
+	}
+	select {
+	case q.global <- struct{}{}:
+	case <-q.ctx.Done():
+		return context.Cause(q.ctx)
+	}
+	return nil
 }
