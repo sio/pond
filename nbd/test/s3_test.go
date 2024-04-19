@@ -17,6 +17,9 @@ import (
 )
 
 func TestWithMinio(t *testing.T) {
+	if testing.Short() {
+		t.Skipf("this test takes quite some time")
+	}
 	directory := randomDir(t)
 	server, access, secret := serve(t, directory)
 	cacheDir, err := os.MkdirTemp("", "pond-cache-*")
