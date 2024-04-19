@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"context"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -68,5 +69,38 @@ func TestQueue(t *testing.T) {
 	got = low.Load()
 	if got != want {
 		t.Errorf("unexpected low priority result: want %d, got %d", want, got)
+	}
+}
+
+func BenchmarkQueue(b *testing.B) {
+	const size = 16
+	queue := NewQueue(context.Background(), size)
+	b.Cleanup(func() { _ = queue.Close() })
+	tick := make(chan struct{})
+	defer close(tick)
+	go func() {
+		for {
+			_, ok := <-tick
+			if !ok {
+				return
+			}
+			err := queue.Release()
+			if err != nil {
+				b.Fatalf("release: %v", err)
+				return
+			}
+		}
+	}()
+	for i := 0; i < b.N; i++ {
+		var err error
+		if rand.Intn(3)%3 == 0 {
+			err = queue.AcquireLowPriority()
+		} else {
+			err = queue.Acquire()
+		}
+		if err != nil {
+			b.Fatalf("acquire: %v", err)
+		}
+		tick <- struct{}{}
 	}
 }
