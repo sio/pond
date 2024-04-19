@@ -73,12 +73,14 @@ update:  ## update Go packages this project depends on
 ci:  ## run continuous integration checks
 ci: lint test bench-quick build
 
-.PHONY: test test-verbose
+.PHONY: test test-verbose test-short
 test:  ## run automated tests
 GOTEST_ARGS+=-shuffle=on
 test-verbose:  ## run tests with increased verbosity
 test-verbose: GOTEST_ARGS+=-v --count=1
-test test-verbose: go.sum
+test-short: ## run only short tests (faster)
+test-short: GOTEST_ARGS+=--short
+test test-verbose test-short: go.sum
 	$(GO) test $(EVERYTHING) -timeout $(GOTEST_TIMEOUT) $(GOTEST_ARGS)
 
 .PHONY: bench
