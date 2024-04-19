@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"context"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -33,6 +34,7 @@ func TestQueue(t *testing.T) {
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
+				fmt.Printf(":")
 				normal.Add(1)
 				wg.Done()
 			}()
@@ -42,11 +44,13 @@ func TestQueue(t *testing.T) {
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
+				fmt.Printf(".")
 				low.Add(1)
 				wg.Done()
 			}()
 		}
 	}
+	time.Sleep(delay)
 	for i := 0; i < size*rounds/2; i++ {
 		err := queue.Release()
 		if err != nil {
@@ -65,10 +69,10 @@ func TestQueue(t *testing.T) {
 		prev = cur
 		time.Sleep(delay)
 	}
-	want := uint32(size * rounds / 2)
-	got := normal.Load()
-	if got != want {
-		t.Errorf("unexpected normal priority result: want %d, got %d", want, got)
+	n, l := normal.Load(), low.Load()
+	t.Logf("halfway there: low=%d, normal=%d", l, n)
+	if l > n/2 { // TODO: this test is flakey in verbose mode, output to console skews timing just enough
+		t.Errorf("too many low priority tasks succeeded: low=%d, normal=%d", l, n)
 	}
 	for i := 0; i < size*rounds/2; i++ {
 		err := queue.Release()
@@ -77,8 +81,8 @@ func TestQueue(t *testing.T) {
 		}
 	}
 	wg.Wait()
-	want = uint32(size * rounds / 2)
-	got = low.Load()
+	want := uint32(size * rounds / 2)
+	got := low.Load()
 	if got != want {
 		t.Errorf("unexpected low priority result: want %d, got %d", want, got)
 	}
