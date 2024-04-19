@@ -28,6 +28,12 @@ func TestWithMinio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("s3.Open: %v", err)
 	}
+	t.Cleanup(func() {
+		err := cache.Close()
+		if err != nil {
+			t.Fatalf("close cache: %v", err)
+		}
+	})
 	t.Log(cache)
 }
 

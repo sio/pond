@@ -23,9 +23,6 @@ type chunkMap struct {
 	path string
 	size uint64
 
-	ctx    context.Context
-	cancel context.CancelCauseFunc
-
 	bitmap    *big.Int
 	bitmapMu  sync.RWMutex
 	running   map[chunk]chan struct{}
@@ -51,7 +48,6 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 		bitmap:  new(big.Int),
 		running: make(map[chunk]chan struct{}),
 	}
-	c.ctx, c.cancel = context.WithCancelCause(context.TODO())
 
 	var header chunkMapExportHeader
 	err = binary.Read(file, binary.BigEndian, &header)
@@ -89,8 +85,7 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 }
 
 func (m *chunkMap) Close() error {
-	m.cancel(fmt.Errorf("close chunk map"))
-	return nil
+	return m.Save()
 }
 
 // Mark chunk as done
@@ -111,43 +106,44 @@ func (m *chunkMap) Done(c chunk) {
 }
 
 // Wait until chunk is done
-func (m *chunkMap) Wait(ctx context.Context, c chunk) {
-	m.check(ctx, c, true)
+func (m *chunkMap) Wait(ctx context.Context, c chunk) error {
+	ch, done := m.check(c)
+	if done {
+		return nil
+	}
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return context.Cause(ctx)
+	}
 }
 
 // Check if chunk is already done
 func (m *chunkMap) Check(c chunk) bool {
-	return m.check(m.ctx, c, false)
+	_, done := m.check(c)
+	return done
 }
 
-func (m *chunkMap) check(ctx context.Context, c chunk, wait bool) bool {
+func (m *chunkMap) check(c chunk) (ch chan struct{}, done bool) {
 	m.bitmapMu.RLock()
-	done := m.bitmap.Bit(int(c)) == 1
+	defer m.bitmapMu.RUnlock()
 
+	done = m.bitmap.Bit(int(c)) == 1
 	if done {
-		m.bitmapMu.RUnlock()
-		return true
+		return nil, true
 	}
 
 	m.runningMu.Lock()
+	defer m.runningMu.Unlock()
+
 	ch, ok := m.running[c]
-	if !ok && wait {
+	if !ok {
 		ch = make(chan struct{})
 		m.running[c] = ch
 	}
-	m.runningMu.Unlock()
-	m.bitmapMu.RUnlock()
 
-	if !wait {
-		return false
-	}
-
-	select {
-	case <-ch:
-	case <-m.ctx.Done():
-	case <-ctx.Done():
-	}
-	return true // not always a correct value; does not matter for .Wait()
+	return ch, false
 }
 
 // Save chunkMap to file system for persistence
@@ -182,11 +178,11 @@ func (m *chunkMap) Save() error {
 	return nil
 }
 
-func (m *chunkMap) autoSave() {
+func (m *chunkMap) AutoSave(ctx context.Context) {
 	const autoSaveInterval = 9 * time.Minute
 	for {
 		select {
-		case <-m.ctx.Done():
+		case <-ctx.Done():
 			return
 		case <-time.After(autoSaveInterval / 2):
 		}

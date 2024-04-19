@@ -47,7 +47,7 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 	}
 	c.goro.Add(1)
 	go func() {
-		c.chunk.autoSave()
+		c.chunk.AutoSave(c.ctx)
 		c.goro.Done()
 	}()
 	return c, nil
