@@ -31,7 +31,7 @@ type Cache struct {
 
 func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, err error) {
 	c = new(Cache)
-	c.ctx, c.cancel = context.WithCancelCause(context.Background())
+	c.ctx, c.cancel = context.WithCancelCause(context.TODO())
 	c.goro = new(sync.WaitGroup)
 	c.remote, err = openMinioRemote(endpoint, access, secret, bucket, object)
 	if err != nil {
