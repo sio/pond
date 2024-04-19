@@ -29,20 +29,29 @@ func TestQueue(t *testing.T) {
 		wg.Add(1)
 		if i%2 == 0 {
 			go func() {
-				queue.Acquire()
+				err := queue.Acquire()
+				if err != nil {
+					t.Errorf("acquire: %v", err)
+				}
 				normal.Add(1)
 				wg.Done()
 			}()
 		} else {
 			go func() {
-				queue.AcquireLowPriority()
+				err := queue.AcquireLowPriority()
+				if err != nil {
+					t.Errorf("acquire: %v", err)
+				}
 				low.Add(1)
 				wg.Done()
 			}()
 		}
 	}
 	for i := 0; i < size*rounds/2; i++ {
-		queue.Release()
+		err := queue.Release()
+		if err != nil {
+			t.Fatalf("release: %v", err)
+		}
 	}
 	var cur, prev, done uint32
 	for {
@@ -62,7 +71,10 @@ func TestQueue(t *testing.T) {
 		t.Errorf("unexpected normal priority result: want %d, got %d", want, got)
 	}
 	for i := 0; i < size*rounds/2; i++ {
-		queue.Release()
+		err := queue.Release()
+		if err != nil {
+			t.Fatalf("release: %v", err)
+		}
 	}
 	wg.Wait()
 	want = uint32(size * rounds / 2)
@@ -78,6 +90,7 @@ func BenchmarkQueue(b *testing.B) {
 	b.Cleanup(func() { _ = queue.Close() })
 	tick := make(chan struct{})
 	defer close(tick)
+	errs := make(chan error, 1)
 	go func() {
 		for {
 			_, ok := <-tick
@@ -86,7 +99,7 @@ func BenchmarkQueue(b *testing.B) {
 			}
 			err := queue.Release()
 			if err != nil {
-				b.Fatalf("release: %v", err)
+				errs <- err
 				return
 			}
 		}
@@ -101,6 +114,10 @@ func BenchmarkQueue(b *testing.B) {
 		if err != nil {
 			b.Fatalf("acquire: %v", err)
 		}
-		tick <- struct{}{}
+		select {
+		case tick <- struct{}{}:
+		case err = <-errs:
+			b.Fatalf("release: %v", err)
+		}
 	}
 }
