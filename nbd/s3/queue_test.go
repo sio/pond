@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"context"
-	"fmt"
 	"math/rand"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +24,9 @@ func TestQueue(t *testing.T) {
 	queue := NewQueue(ctx, size)
 	t.Cleanup(func() { _ = queue.Close() })
 
+	var progress strings.Builder
+	t.Cleanup(func() { t.Logf("queue progress visualisation:\n%s", progress.String()) })
+
 	var normal, low atomic.Uint32
 	var wg sync.WaitGroup
 	for i := 0; i < size*rounds; i++ {
@@ -34,7 +37,7 @@ func TestQueue(t *testing.T) {
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
-				fmt.Printf(":")
+				progress.WriteRune(':')
 				normal.Add(1)
 				wg.Done()
 			}()
@@ -44,7 +47,7 @@ func TestQueue(t *testing.T) {
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
-				fmt.Printf(".")
+				progress.WriteRune('.')
 				low.Add(1)
 				wg.Done()
 			}()
@@ -56,6 +59,7 @@ func TestQueue(t *testing.T) {
 	if l > size || n > size {
 		t.Errorf("too many tasks got through before the first Release(): low=%d, normal=%d", l, n)
 	}
+	progress.WriteRune('\n')
 	for i := 0; i < size*rounds/2; i++ {
 		err := queue.Release()
 		if err != nil {
@@ -79,6 +83,7 @@ func TestQueue(t *testing.T) {
 	if l > n/2 { // TODO: this test is flakey in verbose mode, output to console skews timing just enough
 		t.Errorf("too many low priority tasks succeeded: low=%d, normal=%d", l, n)
 	}
+	progress.WriteRune('\n')
 	for i := 0; i < size*rounds/2; i++ {
 		err := queue.Release()
 		if err != nil {
