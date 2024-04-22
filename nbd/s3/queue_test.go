@@ -51,6 +51,11 @@ func TestQueue(t *testing.T) {
 		}
 	}
 	time.Sleep(delay)
+	n, l := normal.Load(), low.Load()
+	t.Logf("just started: low=%d, normal=%d", l, n)
+	if l > size || n > size {
+		t.Errorf("too many tasks got through before the first Release(): low=%d, normal=%d", l, n)
+	}
 	for i := 0; i < size*rounds/2; i++ {
 		err := queue.Release()
 		if err != nil {
@@ -69,7 +74,7 @@ func TestQueue(t *testing.T) {
 		prev = cur
 		time.Sleep(delay)
 	}
-	n, l := normal.Load(), low.Load()
+	n, l = normal.Load(), low.Load()
 	t.Logf("halfway there: low=%d, normal=%d", l, n)
 	if l > n/2 { // TODO: this test is flakey in verbose mode, output to console skews timing just enough
 		t.Errorf("too many low priority tasks succeeded: low=%d, normal=%d", l, n)
