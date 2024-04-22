@@ -25,7 +25,7 @@ func TestQueue(t *testing.T) {
 	t.Cleanup(func() { _ = queue.Close() })
 
 	var progress strings.Builder
-	t.Cleanup(func() { t.Logf("queue progress visualisation:\n%s", progress.String()) })
+	t.Cleanup(func() { t.Logf("queue progress visualised:\n%s", progress.String()) })
 
 	var normal, low atomic.Uint32
 	var wg sync.WaitGroup
@@ -56,7 +56,7 @@ func TestQueue(t *testing.T) {
 	time.Sleep(delay)
 	n, l := normal.Load(), low.Load()
 	t.Logf("just started: low=%d, normal=%d", l, n)
-	if l > size || n > size {
+	if l > size || n > size || (n+l) > size {
 		t.Errorf("too many tasks got through before the first Release(): low=%d, normal=%d", l, n)
 	}
 	progress.WriteRune('\n')
@@ -92,9 +92,9 @@ func TestQueue(t *testing.T) {
 	}
 	wg.Wait()
 	want := uint32(size * rounds / 2)
-	got := low.Load()
-	if got != want {
-		t.Errorf("unexpected low priority result: want %d, got %d", want, got)
+	n, l = normal.Load(), low.Load()
+	if n != want || l != want {
+		t.Errorf("unexpected final result: low=%d, normal=%d (want %d)", l, n, want)
 	}
 }
 
