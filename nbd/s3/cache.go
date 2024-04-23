@@ -150,7 +150,7 @@ func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
 		fatal(err)
 		return
 	}
-	if n < size { // TODO: != enforce strict match
+	if n != size {
 		fatal(fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size))
 		return
 	}

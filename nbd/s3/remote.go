@@ -59,7 +59,7 @@ func (m *minioRemote) Reader(ctx context.Context, offset, length int64) (io.Read
 	if offset > m.size {
 		return nil, fmt.Errorf("attempting to read past the end of the object (%d > %d)", offset, m.size)
 	}
-	end := offset + length
+	end := offset + length - 1
 	if end > m.size {
 		end = m.size
 	}
