@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/sio/pond/nbd/buffer"
 )
 
 type Cache struct {
@@ -76,10 +78,91 @@ func (c *Cache) Close() error {
 }
 
 func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
-	panic("*Cache.ReadAt not implemented")
+	ctx, cancel := context.WithCancelCause(c.ctx)
+	defer cancel(errNotRelevant)
+
+	// Schedule relevant chunks to be fetched
+	part := chunk(offset / chunkSize)
+	for remain := int64(len(p)); remain > 0; remain -= chunkSize {
+		c.goro.Add(1)
+		go c.fetch(part, cancel)
+		part++
+	}
+
+	// Return data from the first relevant chunk
+	ready, _ := c.chunk.Check(chunk(offset / chunkSize))
+	select {
+	case <-ready:
+		return c.local.ReadAt(p[:min(len(p), chunkSize)], offset)
+	case <-ctx.Done():
+		return 0, context.Cause(ctx)
+	}
+}
+
+// This function intentionally uses a context independent from ReadAt:
+// even if caller was cancelled it is still useful to finish caching the current
+// chunk for future use.
+func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
+	defer c.goro.Done()
+	wait, done := c.chunk.Check(part)
+	if done {
+		return
+	}
+
+	ctx, cancel := context.WithCancelCause(c.ctx)
+	defer cancel(errNotRelevant)
+
+	// Kill both current chunk context and parent ReadAt context
+	// in case of irrecoverable errors
+	fatal := func(e error) {
+		cancel(e)
+		fail(e)
+	}
+
+	c.goro.Add(1)
+	go func() {
+		select {
+		case <-wait:
+			cancel(errDoneElsewhere)
+		case <-ctx.Done():
+		}
+		c.goro.Done()
+	}()
+
+	offset, size := c.chunk.Offset(part)
+	remote, err := c.remote.Reader(ctx, offset, size)
+	if err != nil {
+		fatal(err)
+		return
+	}
+	defer func() {
+		err := remote.Close()
+		if err != nil {
+			cancel(err) // only affects fetch() and not ReadAt()
+		}
+	}()
+
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+
+	n, err := io.CopyBuffer(io.NewOffsetWriter(c.local, offset), remote, buf[:cap(buf)])
+	if err != nil {
+		fatal(err)
+		return
+	}
+	if n < size { // TODO: != enforce strict match
+		fatal(fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size))
+		return
+	}
+	c.chunk.Done(part)
 }
 
 var (
 	_ io.Closer   = new(Cache)
 	_ io.ReaderAt = new(Cache)
+)
+
+var (
+	errNotRelevant   = errors.New("context not relevant anymore")
+	errDoneElsewhere = errors.New("work completed by a concurrent goroutine")
 )

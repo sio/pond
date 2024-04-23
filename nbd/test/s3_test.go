@@ -3,16 +3,21 @@ package test
 import (
 	"testing"
 
+	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/sio/pond/nbd/buffer"
 	"github.com/sio/pond/nbd/s3"
 )
 
@@ -27,17 +32,114 @@ func TestWithMinio(t *testing.T) {
 		t.Fatalf("create cache directory: %v", err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(cacheDir) })
-	cache, err := s3.Open(server, access, secret, "garbage", "10MB", cacheDir)
-	if err != nil {
-		t.Fatalf("s3.Open: %v", err)
+	for _, name := range []string{"10MB", "10KB"} {
+		t.Run(name, func(t *testing.T) {
+			cache, err := s3.Open(server, access, secret, "garbage", name, cacheDir)
+			if err != nil {
+				t.Fatalf("s3.Open: %v", err)
+			}
+			t.Cleanup(func() {
+				err := cache.Close()
+				if err != nil {
+					t.Fatalf("close cache: %v", err)
+				}
+			})
+			original, err := os.Open(filepath.Join(directory, "garbage", name))
+			if err != nil {
+				t.Fatalf("open original file: %v", err)
+			}
+			t.Cleanup(func() { _ = original.Close() })
+			stat, err := original.Stat()
+			if err != nil {
+				t.Fatalf("stat: %v", err)
+			}
+			interim, err := os.Open(filepath.Join(cacheDir, name))
+			if err != nil {
+				t.Fatalf("open interim file: %v", err)
+			}
+			t.Cleanup(func() { _ = interim.Close() })
+
+			for _, tt := range []struct {
+				offset, size int64
+			}{
+				{10, 60},
+				{0, 10 << 10},
+				{1<<20 + 100, 1000},
+				{8 << 20, 2 << 20},
+				{1 << 20, 9 << 20},
+				{0, 10 << 20},
+			} {
+				if tt.offset+tt.size > stat.Size() {
+					continue
+				}
+				t.Run(fmt.Sprintf("@%s+%s", filesize(tt.offset), filesize(tt.size)), func(t *testing.T) {
+					var sample = new(hashCollection)
+					sample.cache, sample.ce = hash(cache, tt.offset, tt.size)
+					sample.interim, sample.ie = hash(interim, tt.offset, tt.size)
+					sample.original, sample.oe = hash(original, tt.offset, tt.size)
+
+					err = sample.Validate()
+					if err != nil {
+						t.Error(err)
+					}
+					t.Log(sample)
+				})
+			}
+		})
 	}
-	t.Cleanup(func() {
-		err := cache.Close()
-		if err != nil {
-			t.Fatalf("close cache: %v", err)
+}
+
+type hashCollection struct {
+	original, interim, cache []byte
+	oe, ie, ce               error
+}
+
+func (hc *hashCollection) Validate() error {
+	if err := errors.Join(hc.oe, hc.ie, hc.ce); err != nil {
+		return err
+	}
+	var msg = new(strings.Builder)
+	if !bytes.Equal(hc.original, hc.interim) {
+		_, _ = fmt.Fprintf(msg, "original != interim (%x != %x)", hc.original, hc.interim)
+	}
+	if !bytes.Equal(hc.interim, hc.cache) {
+		if msg.Len() > 0 {
+			_, _ = msg.WriteString("; ")
 		}
-	})
-	t.Log(cache)
+		_, _ = fmt.Fprintf(msg, "interim != cache (%x != %x)", hc.interim, hc.cache)
+	}
+	if msg.Len() == 0 {
+		return nil
+	}
+	return errors.New(msg.String())
+}
+
+func (hc *hashCollection) String() string {
+	return fmt.Sprintf("%x", hc.original)
+}
+
+func hash(r io.ReaderAt, offset, size int64) ([]byte, error) {
+	buf := buffer.Get()
+	defer buffer.Put(buf)
+
+	h := sha256.New()
+	for size > 0 {
+		buf = buf[:min(cap(buf), int(size))]
+		n, err := r.ReadAt(buf, offset)
+		offset += int64(n)
+		size -= int64(n)
+		if err != nil {
+			return nil, err
+		}
+		_, err = h.Write(buf)
+		if err != nil {
+			return nil, err
+		}
+		if size < 0 {
+			panic("hash: we have read too much")
+		}
+	}
+	return h.Sum(nil), nil
 }
 
 func serve(t *testing.T, directory string) (endpoint, access, secret string) {
@@ -108,7 +210,7 @@ func randomDir(t *testing.T) string {
 	})
 
 	datadir := filepath.Join(directory, "data")
-	for _, size := range []int64{10 << 10, 10 << 20, 20 << 20, 100 << 20} {
+	for _, size := range []int64{10 << 10, 10 << 20} {
 		err := randomFile(
 			filepath.Join(datadir, "garbage", filesize(size)),
 			size,
@@ -145,7 +247,7 @@ func filesize(size int64) string {
 	const ceiling = 1 << 10
 	var unit = []string{"B", "KB", "MB", "GB", "TB", "PB"}
 	var suffix int
-	for size > ceiling && suffix+1 < len(unit) {
+	for size >= ceiling && suffix+1 < len(unit) {
 		size >>= 10
 		suffix++
 	}

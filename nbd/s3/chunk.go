@@ -143,9 +143,8 @@ func (m *chunkMap) Wait(ctx context.Context, c chunk) error {
 }
 
 // Check if chunk is already done
-func (m *chunkMap) Check(c chunk) bool {
-	_, done := m.check(c)
-	return done
+func (m *chunkMap) Check(c chunk) (wait <-chan struct{}, done bool) {
+	return m.check(c)
 }
 
 func (m *chunkMap) check(c chunk) (ch chan struct{}, done bool) {
@@ -154,7 +153,7 @@ func (m *chunkMap) check(c chunk) (ch chan struct{}, done bool) {
 
 	done = m.bitmap.Bit(int(c)) == 1
 	if done {
-		return nil, true
+		return closed, true
 	}
 
 	m.runningMu.Lock()
@@ -224,3 +223,9 @@ type chunkMapExportHeader struct {
 	ChunkSize uint64
 	TotalSize uint64
 }
+
+var closed = func() chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}()
