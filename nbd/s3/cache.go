@@ -23,6 +23,9 @@ type Cache struct {
 	// Chunk availability map
 	chunk *chunkMap
 
+	// Network connection limiter
+	queue *Queue
+
 	// Top level context
 	ctx    context.Context
 	cancel context.CancelCauseFunc
@@ -52,6 +55,7 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 		c.chunk.AutoSave(c.ctx)
 		c.goro.Done()
 	}()
+	c.queue = NewQueue(c.ctx, connLimitPerObject)
 	return c, nil
 }
 
@@ -128,6 +132,15 @@ func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
 		}
 		c.goro.Done()
 	}()
+
+	if err := globalConnectionQueue.Acquire(); err != nil {
+		fatal(err)
+		return
+	}
+	if err := c.queue.Acquire(); err != nil {
+		fatal(err)
+		return
+	}
 
 	offset, size := c.chunk.Offset(part)
 	remote, err := c.remote.Reader(ctx, offset, size)

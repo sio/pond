@@ -4,6 +4,16 @@ import (
 	"context"
 )
 
+const (
+	// Maximum number of simultaneous connections per S3 object
+	connLimitPerObject = 16
+
+	// Total maximum number of simultaneous connections across all S3 objects
+	connLimitGlobal = 64
+)
+
+var globalConnectionQueue = NewQueue(context.Background(), connLimitGlobal)
+
 func NewQueue(ctx context.Context, size int) *Queue {
 	q := &Queue{
 		global: make(chan struct{}, size),
