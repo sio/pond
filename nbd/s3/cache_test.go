@@ -1,4 +1,4 @@
-package test
+package s3
 
 import (
 	"testing"
@@ -18,7 +18,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/sio/pond/nbd/buffer"
-	"github.com/sio/pond/nbd/s3"
 )
 
 func TestWithMinio(t *testing.T) {
@@ -32,9 +31,12 @@ func TestWithMinio(t *testing.T) {
 		t.Fatalf("create cache directory: %v", err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(cacheDir) })
+
+	var seen uint32
+
 	for _, name := range []string{"10MB", "10KB"} {
 		t.Run(name, func(t *testing.T) {
-			cache, err := s3.Open(server, access, secret, "garbage", name, cacheDir)
+			cache, err := Open(server, access, secret, "garbage", name, cacheDir)
 			if err != nil {
 				t.Fatalf("s3.Open: %v", err)
 			}
@@ -49,15 +51,20 @@ func TestWithMinio(t *testing.T) {
 				t.Fatalf("open original file: %v", err)
 			}
 			t.Cleanup(func() { _ = original.Close() })
-			stat, err := original.Stat()
-			if err != nil {
-				t.Fatalf("stat: %v", err)
-			}
 			interim, err := os.Open(filepath.Join(cacheDir, name))
 			if err != nil {
 				t.Fatalf("open interim file: %v", err)
 			}
 			t.Cleanup(func() { _ = interim.Close() })
+			stat, err := original.Stat()
+			if err != nil {
+				t.Fatalf("stat: %v", err)
+			}
+			if stat.Size() > chunkSize {
+				seen |= seenLargeFile
+			} else {
+				seen |= seenSmallFile
+			}
 
 			for _, tt := range []struct {
 				offset, size int64
@@ -73,6 +80,11 @@ func TestWithMinio(t *testing.T) {
 					continue
 				}
 				t.Run(fmt.Sprintf("@%s+%s", filesize(tt.offset), filesize(tt.size)), func(t *testing.T) {
+					if tt.size > chunkSize {
+						seen |= seenLargeChunk
+					} else {
+						seen |= seenSmallChunk
+					}
 					var sample = new(hashCollection)
 					sample.cache, sample.ce = hash(cache, tt.offset, tt.size)
 					sample.interim, sample.ie = hash(interim, tt.offset, tt.size)
@@ -87,7 +99,19 @@ func TestWithMinio(t *testing.T) {
 			}
 		})
 	}
+	if seen != (seenLargeFile | seenSmallFile | seenLargeChunk | seenSmallChunk) {
+		t.Errorf("not all possible chunk/file sizes were tested: %b", seen)
+	} else {
+		t.Logf("seen chunk/file size combinations: %b", seen)
+	}
 }
+
+const (
+	seenSmallFile = 1 << iota
+	seenLargeFile
+	seenSmallChunk
+	seenLargeChunk
+)
 
 type hashCollection struct {
 	original, interim, cache []byte
