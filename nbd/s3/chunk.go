@@ -41,6 +41,19 @@ type chunkMap struct {
 	saved     time.Time
 }
 
+func (m *chunkMap) Offset(c chunk) (offset, size int64) {
+	size = int64(chunkSize)
+	offset = size * int64(c)
+	total := int64(m.size)
+	if offset > total {
+		return 0, 0
+	}
+	if offset+size > total {
+		size = total - offset
+	}
+	return offset, size
+}
+
 func openChunkMap(path string, size int64) (*chunkMap, error) {
 	file, err := os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0600)
 	if err != nil {
