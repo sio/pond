@@ -13,8 +13,18 @@ import (
 )
 
 const (
-	chunkVersion = "ChunkMapV01" // always change this when chunkSize is changed
-	chunkSize    = 1 << 20
+	// Target network speed is 100Mbps.
+	//
+	// TLS handshake takes around 500ms (at least 3 network roundtrips plus crypto),
+	// that translates into 100/8*0.500 = 6.25MB transfer (lost opportunity).
+	// We need to amortize this overhead.
+	//
+	// Amazon recommends to use 8..16MB for S3 range requests:
+	// https://docs.aws.amazon.com/whitepapers/latest/s3-optimizing-performance-best-practices/use-byte-range-fetches.html
+	//
+	// TODO: does minio.Client maintain a connection pool for HTTP requests?
+	chunkSize    = 8 << 20
+	chunkVersion = "ChunkMapV02" // always change this when chunkSize is changed
 )
 
 type chunk uint64
