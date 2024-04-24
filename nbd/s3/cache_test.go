@@ -122,6 +122,19 @@ func (hc *hashCollection) Validate() error {
 	if err := errors.Join(hc.oe, hc.ie, hc.ce); err != nil {
 		return err
 	}
+	if hc.original == nil {
+		return errors.New("nil hash")
+	}
+	zero := true
+	for _, b := range hc.original {
+		if b != 0 {
+			zero = false
+			break
+		}
+	}
+	if zero {
+		return fmt.Errorf("zero hash (%d bits): %#x", len(hc.original)*8, hc.original)
+	}
 	var msg = new(strings.Builder)
 	if !bytes.Equal(hc.original, hc.interim) {
 		_, _ = fmt.Fprintf(msg, "original != interim (%x != %x)", hc.original, hc.interim)
