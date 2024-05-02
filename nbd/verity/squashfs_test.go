@@ -46,3 +46,25 @@ func TestQuickAndDirty(t *testing.T) {
 		t.Fatalf("verify more than file size: %v", err)
 	}
 }
+
+func BenchmarkVerifySingleBlock(b *testing.B) {
+	path := "testdata/pseudorandom.squashfs"
+	path, err := filepath.Abs(path)
+	if err != nil {
+		b.Fatal(err)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		b.Fatal(err)
+	}
+	verity, err := verityAfterSquashfs(file)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		err = verity.Verify(file, 0, 1)
+		if err != nil {
+			b.Fatalf("verify first byte: %v", err)
+		}
+	}
+}
