@@ -8,6 +8,7 @@ import (
 	"io"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sio/pond/nbd/buffer"
@@ -29,6 +30,9 @@ type Cache struct {
 	// Top level context
 	ctx    context.Context
 	cancel context.CancelCauseFunc
+
+	// Time of the last cache miss
+	atime atomic.Value
 
 	// Keep track of spawned goroutines
 	goro *sync.WaitGroup
@@ -56,6 +60,12 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 		c.goro.Done()
 	}()
 	c.queue = NewQueue(c.ctx, connLimitPerObject)
+	c.atime.Store(time.Now())
+	c.goro.Add(1)
+	go func() {
+		c.bgFetchAll()
+		c.goro.Done()
+	}()
 	return c, nil
 }
 
@@ -145,6 +155,10 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 		return err
 	}
 
+	if !background {
+		c.atime.Store(time.Now())
+	}
+
 	offset, size := c.chunk.Offset(part)
 	remote, err := c.remote.Reader(ctx, offset, size)
 	if err != nil {
@@ -169,6 +183,37 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 	}
 	c.chunk.Done(part)
 	return nil
+}
+
+// Fetch all data from remote to local storage (warm up the cache)
+func (c *Cache) bgFetchAll() {
+	const (
+		// Do nothing if there was higher priority activity recently
+		idleDelay = 1 * time.Minute
+
+		// Retry each block N times before giving up
+		retryLimit = 5
+	)
+	var retry int
+	var part chunk
+	for uint64(part)*chunkSize < c.chunk.size {
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-time.After(time.Until(c.atime.Load().(time.Time).Add(idleDelay))):
+		}
+		if time.Since(c.atime.Load().(time.Time)) < idleDelay {
+			continue
+		}
+		err := c.fetch(part, true)
+		if err != nil && retry < retryLimit {
+			retry++
+			continue
+		}
+		// TODO: log errors from background fetcher
+		retry = 0 // reset counter on success or after giving up on bad chunk
+		part++
+	}
 }
 
 var (
