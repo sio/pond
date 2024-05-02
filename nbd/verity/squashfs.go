@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func verityAfterSquashfs(partition io.ReaderAt) (v verityTree, err error) {
+func verityAfterSquashfs(partition io.ReaderAt) (v Verity, err error) {
 	reader := &offsetReader{Reader: partition, Offset: 0}
 
 	// Parse squashfs superblock
@@ -33,7 +33,7 @@ func verityAfterSquashfs(partition io.ReaderAt) (v verityTree, err error) {
 	if err != nil {
 		return v, fmt.Errorf("reading verity superblock: %w", err)
 	}
-	err = v.Validate()
+	err = v.validate()
 	if err != nil {
 		return v, fmt.Errorf("verity: %w", err)
 	}

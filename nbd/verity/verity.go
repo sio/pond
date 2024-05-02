@@ -1,3 +1,5 @@
+// Quick data integrity verification using dm-verity hash tree.
+// This is not intended to be a full verity implementation.
 package verity
 
 import (
@@ -8,14 +10,27 @@ import (
 	"io"
 )
 
-type verityTree struct {
+// Parse verity hash tree appended to data partition.
+// Currently only squashfs partitions are supported.
+//
+// Does not capture the provided reader.
+func Open(r io.ReaderAt) (Verity, error) {
+	return verityAfterSquashfs(r)
+}
+
+type Verity struct {
 	veritySuperblock
 	superblockOffset int64
 	leafHashOffset   int64
 }
 
-func (t *verityTree) Verify(r io.ReaderAt, offset int64, size int) error {
-	hash := t.Hash()
+// Verify integrity of data region described by provided offset and size.
+//
+// This check guards only against accidental data corruption:
+// only leaf hashes of verity tree are being calculated and compared.
+// Use cryptsetup tools to get full integrity guarantees provided by dm-verity.
+func (t *Verity) Verify(r io.ReaderAt, offset int64, size int) error {
+	hash := t.hash()
 	if t.leafHashOffset < t.superblockOffset {
 		t.findFirstLeafHash(hash)
 	}
@@ -30,7 +45,7 @@ func (t *verityTree) Verify(r io.ReaderAt, offset int64, size int) error {
 }
 
 // Verify integrity of data block with given index
-func (t *verityTree) verifyBlock(r io.ReaderAt, hash hash.Hash, index int) error {
+func (t *Verity) verifyBlock(r io.ReaderAt, hash hash.Hash, index int) error {
 	// Expected data block hash
 	want := make([]byte, hash.Size())
 	n, err := r.ReadAt(want, t.leafHashOffset+int64(index)*int64(hash.Size()))
@@ -59,7 +74,7 @@ func (t *verityTree) verifyBlock(r io.ReaderAt, hash hash.Hash, index int) error
 	return nil
 }
 
-func (t *verityTree) findFirstLeafHash(hash hash.Hash) {
+func (t *Verity) findFirstLeafHash(hash hash.Hash) {
 	hashesPerBlock := int64(t.HashBlockSize) / int64(hash.Size())
 	var layer []int64
 	var i int
@@ -96,7 +111,8 @@ type veritySuperblock struct {
 	_              [128]byte
 }
 
-func (sb *veritySuperblock) Validate() error {
+// Validate verity superblock
+func (sb *veritySuperblock) validate() error {
 	if string(sb.Magic[:]) != "verity\x00\x00" {
 		return fmt.Errorf("invalid superblock magic: %q (%#x)", string(sb.Magic[:]), sb.Magic)
 	}
@@ -123,7 +139,7 @@ func (sb *veritySuperblock) Validate() error {
 	return nil
 }
 
-func (sb *veritySuperblock) Hash() hash.Hash {
+func (sb *veritySuperblock) hash() hash.Hash {
 	const prefix = 6 // number of bytes that uniquely identify each supported algorithm
 	switch string(sb.Algorithm[:prefix]) {
 	case "sha256":
