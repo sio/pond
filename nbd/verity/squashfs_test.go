@@ -8,7 +8,7 @@ import (
 )
 
 func TestQuickAndDirty(t *testing.T) {
-	path := "../../rootfs/x/squashfs/ok.squashfs"
+	path := "testdata/pseudorandom.squashfs"
 	path, err := filepath.Abs(path)
 	if err != nil {
 		t.Fatal(err)
@@ -17,12 +17,32 @@ func TestQuickAndDirty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	stat, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
 	verity, err := verityAfterSquashfs(file)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = verity.Verify(file, 0) // TODO: this does not work yet, probably error in calculating of leafHashOffset or index-hash-offset
+	err = verity.Verify(file, 0, 1)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("verify first byte: %v", err)
+	}
+	err = verity.Verify(file, 0, 1<<10)
+	if err != nil {
+		t.Fatalf("verify more than first block: %v", err)
+	}
+	err = verity.Verify(file, 100, 1)
+	if err != nil {
+		t.Fatalf("verify a byte at some offset: %v", err)
+	}
+	err = verity.Verify(file, 0, int(stat.Size()))
+	if err != nil {
+		t.Fatalf("verify file size: %v", err)
+	}
+	err = verity.Verify(file, 0, int(stat.Size())+100000)
+	if err != nil {
+		t.Fatalf("verify more than file size: %v", err)
 	}
 }

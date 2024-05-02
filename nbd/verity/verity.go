@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io"
 )
 
@@ -13,16 +14,26 @@ type verityTree struct {
 	leafHashOffset   int64
 }
 
-// Verify integrity of data block with given index
-func (t *verityTree) Verify(r io.ReaderAt, index int) error {
-	// Housekeeping first
+func (t *verityTree) Verify(r io.ReaderAt, offset int64, size int) error {
+	hash := t.Hash()
 	if t.leafHashOffset < t.superblockOffset {
-		t.findFirstLeafHash()
+		t.findFirstLeafHash(hash)
 	}
+	for block := int(offset / int64(t.DataBlockSize)); size > 0 && uint64(block) < t.DataBlockCount; block++ {
+		err := t.verifyBlock(r, hash, block)
+		if err != nil {
+			return err
+		}
+		size -= int(t.DataBlockSize)
+	}
+	return nil
+}
 
+// Verify integrity of data block with given index
+func (t *verityTree) verifyBlock(r io.ReaderAt, hash hash.Hash, index int) error {
 	// Expected data block hash
-	want := make([]byte, sha256.Size)
-	n, err := r.ReadAt(want, t.leafHashOffset+int64(index)*int64(t.HashBlockSize))
+	want := make([]byte, hash.Size())
+	n, err := r.ReadAt(want, t.leafHashOffset+int64(index)*int64(hash.Size()))
 	if err != nil {
 		return fmt.Errorf("reading verity hash: %w", err)
 	}
@@ -31,7 +42,7 @@ func (t *verityTree) Verify(r io.ReaderAt, index int) error {
 	}
 
 	// Actual data block hash
-	hash := sha256.New()
+	hash.Reset()
 	_, err = hash.Write(t.Salt[:int(t.SaltSize)])
 	if err != nil {
 		return err
@@ -48,8 +59,8 @@ func (t *verityTree) Verify(r io.ReaderAt, index int) error {
 	return nil
 }
 
-func (t *verityTree) findFirstLeafHash() {
-	hashesPerBlock := int64(t.HashBlockSize) / sha256.Size
+func (t *verityTree) findFirstLeafHash(hash hash.Hash) {
+	hashesPerBlock := int64(t.HashBlockSize) / int64(hash.Size())
 	var layer []int64
 	var i int
 	blocks := int64(t.DataBlockCount)
@@ -95,10 +106,14 @@ func (sb *veritySuperblock) Validate() error {
 	if sb.Type != 1 {
 		return fmt.Errorf("unsupported superblock type: %d (%#x)", sb.Type, sb.Type)
 	}
-	if string(sb.Algorithm[:bytes.IndexByte(sb.Algorithm[:], 0)]) != "sha256" {
+	var hashSize uint16 = 0xffff
+	switch string(sb.Algorithm[:bytes.IndexByte(sb.Algorithm[:], 0)]) {
+	case "sha256":
+		hashSize = sha256.Size
+	default:
 		return fmt.Errorf("unsupported hash algorithm: %s (%#x)", string(sb.Algorithm[:]), sb.Algorithm)
 	}
-	if sb.SaltSize < sha256.Size {
+	if sb.SaltSize < hashSize {
 		return fmt.Errorf("salt too short: %d bit", int(sb.SaltSize)*8)
 	}
 	var zero [256]byte
@@ -106,6 +121,16 @@ func (sb *veritySuperblock) Validate() error {
 		return fmt.Errorf("empty salt in superblock: %#x", sb.Salt)
 	}
 	return nil
+}
+
+func (sb *veritySuperblock) Hash() hash.Hash {
+	const prefix = 6 // number of bytes that uniquely identify each supported algorithm
+	switch string(sb.Algorithm[:prefix]) {
+	case "sha256":
+		return sha256.New()
+	default:
+		panic("attempting to initialize hash function before superblock validation")
+	}
 }
 
 type offsetReader struct {

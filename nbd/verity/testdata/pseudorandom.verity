@@ -1,0 +1,9 @@
+VERITY header information for pseudorandom.squashfs
+UUID:            	509fece3-bdab-4a7c-b81e-78ab33260058
+Hash type:       	1
+Data blocks:     	49
+Data block size: 	4096
+Hash block size: 	4096
+Hash algorithm:  	sha256
+Salt:            	58871e5601cac31522dcee838ebda5e8e2bcfc1ff53a86e8fe7500e4ca1bf790
+Root hash:      	7b26410ba9cd392d5e95c2f373cdfbd894fa406b351ed54ac5b6416e5514f5f4
