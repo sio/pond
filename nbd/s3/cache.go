@@ -66,6 +66,7 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 		c.bgFetchAll()
 		c.goro.Done()
 	}()
+	// TODO: add a background goroutine that validates integrity of fetched chunks using dm-verity
 	return c, nil
 }
 
