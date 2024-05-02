@@ -75,5 +75,10 @@ clean: umount
 	git clean -idx
 
 
+.PHONY: apt
+apt:
+	apt install -y --no-install-recommends squashfs-tools cryptsetup-bin
+
+
 .PHONY: ci update upx
 ci update upx:  ## noop, required for `make ci` at repo level
