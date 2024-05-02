@@ -65,30 +65,58 @@ func (q *Queue) Release() error {
 	return nil
 }
 
-func (q *Queue) Acquire() error {
+func (q *Queue) Acquire(ctx context.Context) error {
 	select {
 	case q.normal <- struct{}{}:
 	case <-q.ctx.Done():
 		return context.Cause(q.ctx)
+	case <-ctx.Done():
+		return context.Cause(ctx)
 	}
 	select {
 	case q.global <- struct{}{}:
 	case <-q.ctx.Done():
 		return context.Cause(q.ctx)
+	case <-ctx.Done():
+		return context.Cause(ctx)
 	}
 	return nil
 }
 
-func (q *Queue) AcquireLowPriority() error {
+func (q *Queue) AcquireLowPriority(ctx context.Context) error {
 	select {
 	case q.low <- struct{}{}:
 	case <-q.ctx.Done():
 		return context.Cause(q.ctx)
+	case <-ctx.Done():
+		return context.Cause(ctx)
 	}
 	select {
 	case q.global <- struct{}{}:
 	case <-q.ctx.Done():
 		return context.Cause(q.ctx)
+	case <-ctx.Done():
+		return context.Cause(ctx)
+	}
+	return nil
+}
+
+func Acquire(ctx context.Context, queue ...*Queue) error {
+	for _, q := range queue {
+		err := q.Acquire(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func AcquireLowPriority(ctx context.Context, queue ...*Queue) error {
+	for _, q := range queue {
+		err := q.AcquireLowPriority(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

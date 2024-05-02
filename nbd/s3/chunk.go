@@ -128,20 +128,6 @@ func (m *chunkMap) Done(c chunk) {
 	m.modified = time.Now()
 }
 
-// Wait until chunk is done
-func (m *chunkMap) Wait(ctx context.Context, c chunk) error {
-	ch, done := m.check(c)
-	if done {
-		return nil
-	}
-	select {
-	case <-ch:
-		return nil
-	case <-ctx.Done():
-		return context.Cause(ctx)
-	}
-}
-
 // Check if chunk is already done
 func (m *chunkMap) Check(c chunk) (wait <-chan struct{}, done bool) {
 	return m.check(c)

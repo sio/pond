@@ -33,7 +33,7 @@ func TestQueue(t *testing.T) {
 		wg.Add(1)
 		if i%2 == 0 {
 			go func() {
-				err := queue.Acquire()
+				err := queue.Acquire(ctx)
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
@@ -43,7 +43,7 @@ func TestQueue(t *testing.T) {
 			}()
 		} else {
 			go func() {
-				err := queue.AcquireLowPriority()
+				err := queue.AcquireLowPriority(ctx)
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
@@ -100,7 +100,8 @@ func TestQueue(t *testing.T) {
 
 func BenchmarkQueue(b *testing.B) {
 	const size = 16
-	queue := NewQueue(context.Background(), size)
+	ctx := context.Background()
+	queue := NewQueue(ctx, size)
 	b.Cleanup(func() { _ = queue.Close() })
 	tick := make(chan struct{})
 	defer close(tick)
@@ -121,9 +122,9 @@ func BenchmarkQueue(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var err error
 		if rand.Intn(3)%3 == 0 {
-			err = queue.AcquireLowPriority()
+			err = queue.AcquireLowPriority(ctx)
 		} else {
-			err = queue.Acquire()
+			err = queue.Acquire(ctx)
 		}
 		if err != nil {
 			b.Fatalf("acquire: %v", err)

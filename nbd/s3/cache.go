@@ -91,7 +91,7 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 	for remain := int64(len(p)); remain > 0; remain -= chunkSize {
 		c.goro.Add(1)
 		go func(part chunk) {
-			err := c.fetch(part)
+			err := c.fetch(part, false)
 			if err != nil {
 				cancel(err)
 			}
@@ -113,7 +113,7 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 // This function intentionally uses a context independent from ReadAt:
 // even if caller was cancelled it is still useful to finish caching the current
 // chunk for future use.
-func (c *Cache) fetch(part chunk) error {
+func (c *Cache) fetch(part chunk, background bool) (err error) {
 	wait, done := c.chunk.Check(part)
 	if done {
 		return nil
@@ -132,10 +132,16 @@ func (c *Cache) fetch(part chunk) error {
 		c.goro.Done()
 	}()
 
-	if err := globalConnectionQueue.Acquire(); err != nil {
-		return err
+	if background {
+		err = AcquireLowPriority(ctx, globalConnectionQueue, c.queue)
+	} else {
+		err = Acquire(ctx, globalConnectionQueue, c.queue)
 	}
-	if err := c.queue.Acquire(); err != nil {
+	if err != nil {
+		_, done = c.chunk.Check(part)
+		if done {
+			return nil
+		}
 		return err
 	}
 
