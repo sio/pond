@@ -66,6 +66,7 @@ func (c *Cache) Close() error {
 		c.remote,
 		c.local,
 		c.chunk,
+		c.queue,
 	} {
 		errs = append(errs, component.Close())
 	}
@@ -89,7 +90,13 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 	part := chunk(offset / chunkSize)
 	for remain := int64(len(p)); remain > 0; remain -= chunkSize {
 		c.goro.Add(1)
-		go c.fetch(part, cancel)
+		go func(part chunk) {
+			err := c.fetch(part)
+			if err != nil {
+				cancel(err)
+			}
+			c.goro.Done()
+		}(part)
 		part++
 	}
 
@@ -106,22 +113,14 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 // This function intentionally uses a context independent from ReadAt:
 // even if caller was cancelled it is still useful to finish caching the current
 // chunk for future use.
-func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
-	defer c.goro.Done()
+func (c *Cache) fetch(part chunk) error {
 	wait, done := c.chunk.Check(part)
 	if done {
-		return
+		return nil
 	}
 
 	ctx, cancel := context.WithCancelCause(c.ctx)
 	defer cancel(errNotRelevant)
-
-	// Kill both current chunk context and parent ReadAt context
-	// in case of irrecoverable errors
-	fatal := func(e error) {
-		cancel(e)
-		fail(e)
-	}
 
 	c.goro.Add(1)
 	go func() {
@@ -134,19 +133,16 @@ func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
 	}()
 
 	if err := globalConnectionQueue.Acquire(); err != nil {
-		fatal(err)
-		return
+		return err
 	}
 	if err := c.queue.Acquire(); err != nil {
-		fatal(err)
-		return
+		return err
 	}
 
 	offset, size := c.chunk.Offset(part)
 	remote, err := c.remote.Reader(ctx, offset, size)
 	if err != nil {
-		fatal(err)
-		return
+		return err
 	}
 	defer func() {
 		err := remote.Close()
@@ -160,14 +156,13 @@ func (c *Cache) fetch(part chunk, fail context.CancelCauseFunc) {
 
 	n, err := io.CopyBuffer(io.NewOffsetWriter(c.local, offset), remote, buf[:cap(buf)])
 	if err != nil {
-		fatal(err)
-		return
+		return err
 	}
 	if n != size {
-		fatal(fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size))
-		return
+		return fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size)
 	}
 	c.chunk.Done(part)
+	return nil
 }
 
 var (
