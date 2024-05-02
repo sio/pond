@@ -228,7 +228,7 @@ func serve(t *testing.T, directory string) (endpoint, access, secret string) {
 	if err != nil {
 		t.Fatalf("get port: %v", err)
 	}
-	endpoint = fmt.Sprintf("%s:%s", host, port.Port())
+	endpoint = fmt.Sprintf("http://%s:%s", host, port.Port())
 	t.Log("Started an S3 server for tests: ")
 	t.Logf("$ mc alias set testserver http://%s %q %q", endpoint, access, secret)
 	return endpoint, access, secret

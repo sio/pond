@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -21,11 +22,20 @@ type remoteInterface interface {
 }
 
 func openMinioRemote(endpoint, access, secret, bucket, object string) (remoteInterface, error) {
+	remote, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	var useTLS bool = true
+	switch remote.Scheme {
+	case "http":
+		useTLS = false
+	default:
+	}
 	m := new(minioRemote)
-	var err error
-	m.client, err = minio.New(endpoint, &minio.Options{
-		Creds: credentials.NewStaticV4(access, secret, ""),
-		//Secure: true, // TODO: use SSL
+	m.client, err = minio.New(remote.Host, &minio.Options{
+		Creds:  credentials.NewStaticV4(access, secret, ""),
+		Secure: useTLS,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("s3 client: %w", err)
