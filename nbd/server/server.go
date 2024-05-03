@@ -11,6 +11,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -60,10 +61,16 @@ func (s *Server) Listen(network, address string) error {
 	for {
 		select {
 		case <-s.ctxSoft.Done():
-			return context.Cause(s.ctxSoft)
+			err = context.Cause(s.ctxSoft)
 		case <-s.ctxStrict.Done():
-			return context.Cause(s.ctxStrict)
+			err = context.Cause(s.ctxStrict)
 		default:
+		}
+		if errors.Is(err, NBD_ESHUTDOWN) {
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 		err = listener.SetDeadline(time.Now().Add(connAcceptTimeout))
 		if err != nil {
