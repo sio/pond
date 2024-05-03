@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/sio/pond/nbd/buffer"
+	"github.com/sio/pond/nbd/logger"
 )
 
 type Cache struct {
@@ -211,7 +212,10 @@ func (c *Cache) bgFetchAll() {
 			retry++
 			continue
 		}
-		// TODO: log errors from background fetcher
+		if err != nil {
+			log := logger.FromContext(c.ctx)
+			log.Warn("background fetch failed", "chunk", part, "error", err)
+		}
 		retry = 0 // reset counter on success or after giving up on bad chunk
 		part++
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"sync"
 
 	"github.com/sio/pond/nbd/buffer"
@@ -47,7 +46,6 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 			}
 		}
 	}()
-	defer log.Println("Exit transmission:", conn)
 
 	var err error
 	for {
@@ -74,7 +72,6 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 		case NBD_CMD_READ:
 			request.Add(1)
 			go func(cmd requestHeader) {
-				//log.Printf("read request %#x+%db", cmd.Offset, cmd.Len)
 				defer request.Done()
 
 				buf := buffer.Get()

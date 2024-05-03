@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/sio/pond/nbd/logger"
 )
 
 const (
@@ -203,7 +205,11 @@ func (m *chunkMap) AutoSave(ctx context.Context) {
 		if m.modified.Add(autoSaveInterval/4).After(time.Now()) && m.modified.Sub(m.saved) < autoSaveInterval {
 			continue
 		}
-		_ = m.Save() // TODO: log these errors instead of throwing them away
+		err := m.Save()
+		if err != nil {
+			log := logger.FromContext(ctx)
+			log.Warn("chunkmap autosave failed", "error", err)
+		}
 	}
 }
 

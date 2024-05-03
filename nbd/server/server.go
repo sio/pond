@@ -13,13 +13,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/sio/pond/nbd/logger"
 )
 
 // Actual storage interaction happens through this object
@@ -73,7 +74,8 @@ func (s *Server) Listen(network, address string) error {
 			continue
 		}
 		if err != nil {
-			log.Println(err)
+			log := logger.FromContext(s.ctxSoft)
+			log.Warn("accepting connection failed", "error", err)
 			continue
 		}
 		go s.handleConnection(conn)
@@ -90,7 +92,8 @@ func (s *Server) ListenShutdown(sig ...os.Signal) {
 	for {
 		select {
 		case interrupt := <-ch:
-			log.Printf("Initiating graceful shutdown due to %s", interrupt)
+			log := logger.FromContext(s.ctxSoft)
+			log.Info("initiating graceful shutdown", "interrupt", interrupt)
 			s.Shutdown()
 			return
 		case <-s.ctxStrict.Done():
@@ -105,9 +108,10 @@ func (s *Server) Shutdown() {
 		select {
 		case <-s.ctxStrict.Done():
 		case <-time.After(gracefulShutdownTimeout):
+			log := logger.FromContext(s.ctxStrict)
+			log.Error("graceful shutdown took too long, crashing hard")
 			s.cancelStrict(NBD_ESHUTDOWN)
 			time.Sleep(time.Second)
-			log.Fatalf("Graceful shutdown took longer than %s, crashing hard", gracefulShutdownTimeout)
 		}
 	}()
 	s.cancelSoft(NBD_ESHUTDOWN)   // do not accept new connections and commands
@@ -132,12 +136,13 @@ func (s *Server) handleConnection(conn net.Conn) {
 	addr := conn.RemoteAddr()
 	client := fmt.Sprintf("%s://%s", addr.Network(), addr.String())
 
+	log := logger.FromContext(s.ctxSoft)
 	err := s.serveNBD(conn)
 	if err != nil {
-		log.Printf("%s: disconnect on failure: %v", client, err)
+		log.Info("disconnected on failure", "client", client, "error", err)
 		return
 	}
-	log.Printf("%s: disconnect on success", client)
+	log.Info("disconnected on success", "client", client)
 }
 
 // Speak NBD protocol over a single TCP/TLS connection
