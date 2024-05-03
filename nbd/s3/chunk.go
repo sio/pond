@@ -169,7 +169,10 @@ func (m *chunkMap) Save() error {
 		ChunkSize: uint64(chunkSize),
 		TotalSize: m.size,
 	}
-	copy(header.Version[:], []byte(chunkVersion))
+	n := copy(header.Version[:], []byte(chunkVersion))
+	if n < len(chunkVersion) {
+		panic("chunk version is longer than supported by on-disk format. This is a bug!")
+	}
 	err = binary.Write(temp, binary.BigEndian, header)
 	if err != nil {
 		return fmt.Errorf("writing header: %w", err)
