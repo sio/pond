@@ -56,15 +56,15 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 	}
 	c.goro.Add(1)
 	go func() {
+		defer c.goro.Done()
 		c.chunk.AutoSave(c.ctx)
-		c.goro.Done()
 	}()
 	c.queue = NewQueue(c.ctx, connLimitPerObject)
 	c.atime.Store(time.Now())
 	c.goro.Add(1)
 	go func() {
+		defer c.goro.Done()
 		c.bgFetchAll()
-		c.goro.Done()
 	}()
 	// TODO: add a background goroutine that validates integrity of fetched chunks using dm-verity
 	return c, nil
@@ -102,11 +102,11 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 	for remain := int64(len(p)); remain > 0; remain -= chunkSize {
 		c.goro.Add(1)
 		go func(part chunk) {
+			defer c.goro.Done()
 			err := c.fetch(part, false)
 			if err != nil {
 				cancel(err)
 			}
-			c.goro.Done()
 		}(part)
 		part++
 	}
@@ -135,12 +135,12 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 
 	c.goro.Add(1)
 	go func() {
+		defer c.goro.Done()
 		select {
 		case <-wait:
 			cancel(errDoneElsewhere)
 		case <-ctx.Done():
 		}
-		c.goro.Done()
 	}()
 
 	if background {

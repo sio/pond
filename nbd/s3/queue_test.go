@@ -33,23 +33,23 @@ func TestQueue(t *testing.T) {
 		wg.Add(1)
 		if i%2 == 0 {
 			go func() {
+				defer wg.Done()
 				err := queue.Acquire(ctx)
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
 				progress.WriteRune(':')
 				normal.Add(1)
-				wg.Done()
 			}()
 		} else {
 			go func() {
+				defer wg.Done()
 				err := queue.AcquireLowPriority(ctx)
 				if err != nil {
 					t.Errorf("acquire: %v", err)
 				}
 				progress.WriteRune('.')
 				low.Add(1)
-				wg.Done()
 			}()
 		}
 	}
