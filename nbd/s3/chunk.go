@@ -29,7 +29,7 @@ const (
 	chunkVersion = "ChunkMapV02" // always change this when chunkSize is changed
 )
 
-type chunk uint64
+type chunk int
 
 type chunkMap struct {
 	path string
@@ -43,15 +43,15 @@ type chunkMap struct {
 	saved     time.Time
 }
 
-func (m *chunkMap) Offset(c chunk) (offset, size int64) {
-	size = int64(chunkSize)
-	offset = size * int64(c)
+func (m *chunkMap) Offset(c chunk) (offset int64, size int) {
+	size = chunkSize
+	offset = int64(size) * int64(c)
 	total := int64(m.size)
 	if offset > total {
 		return 0, 0
 	}
-	if offset+size > total {
-		size = total - offset
+	if offset+int64(size) > total {
+		size = int(total - offset)
 	}
 	return offset, size
 }
@@ -130,6 +130,15 @@ func (m *chunkMap) Done(c chunk) {
 	m.modified = time.Now()
 }
 
+// Mark chunk as lost (for example after failing checksum verification)
+func (m *chunkMap) Lost(c chunk) {
+	m.bitmapMu.Lock()
+	defer m.bitmapMu.Unlock()
+	m.bitmap.SetBit(m.bitmap, int(c), 0)
+
+	m.modified = time.Now()
+}
+
 // Check if chunk is already done
 func (m *chunkMap) Check(c chunk) (wait <-chan struct{}, done bool) {
 	return m.check(c)
@@ -154,6 +163,18 @@ func (m *chunkMap) check(c chunk) (ch chan struct{}, done bool) {
 	}
 
 	return ch, false
+}
+
+// Find next available chunk after the given one
+func (m *chunkMap) After(current chunk) (next chunk, found bool) {
+	m.bitmapMu.RLock()
+	defer m.bitmapMu.RUnlock()
+	for next := current + 1; int(next) < m.bitmap.BitLen(); next++ {
+		if m.bitmap.Bit(int(next)) == 1 {
+			return next, true
+		}
+	}
+	return 0, false
 }
 
 // Save chunkMap to file system for persistence

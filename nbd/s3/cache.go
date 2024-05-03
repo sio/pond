@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/sio/pond/nbd/buffer"
 	"github.com/sio/pond/nbd/logger"
+	"github.com/sio/pond/nbd/verity"
 )
 
 type Cache struct {
@@ -42,7 +44,10 @@ type Cache struct {
 func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, err error) {
 	c = new(Cache)
 	c.ctx, c.cancel = context.WithCancelCause(context.TODO())
+	c.ctx = logger.With(c.ctx, "s3", fmt.Sprintf("%s/%s/%s", endpoint, bucket, object))
 	c.goro = new(sync.WaitGroup)
+	c.queue = NewQueue(c.ctx, connLimitPerObject)
+	c.atime.Store(time.Now())
 	c.remote, err = openMinioRemote(endpoint, access, secret, bucket, object)
 	if err != nil {
 		return nil, fmt.Errorf("open remote: %w", err)
@@ -55,19 +60,30 @@ func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, 
 	if err != nil {
 		return nil, fmt.Errorf("open chunk map: %w", err)
 	}
+
 	c.goro.Add(1)
 	go func() {
 		defer c.goro.Done()
 		c.chunk.AutoSave(c.ctx)
 	}()
-	c.queue = NewQueue(c.ctx, connLimitPerObject)
-	c.atime.Store(time.Now())
+
 	c.goro.Add(1)
 	go func() {
 		defer c.goro.Done()
 		c.bgFetchAll()
 	}()
-	// TODO: add a background goroutine that validates integrity of fetched chunks using dm-verity
+
+	c.goro.Add(1)
+	go func() {
+		defer c.goro.Done()
+		checksum, err := verity.Open(c)
+		if err != nil {
+			log := logger.FromContext(c.ctx)
+			log.Info("background data integrity validation disabled", "error", err)
+			return
+		}
+		c.bgIntegrity(checksum)
+	}()
 	return c, nil
 }
 
@@ -162,7 +178,7 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 	}
 
 	offset, size := c.chunk.Offset(part)
-	remote, err := c.remote.Reader(ctx, offset, size)
+	remote, err := c.remote.Reader(ctx, offset, int64(size))
 	if err != nil {
 		return err
 	}
@@ -180,7 +196,7 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 	if err != nil {
 		return err
 	}
-	if n != size {
+	if n != int64(size) {
 		return fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size)
 	}
 	c.chunk.Done(part)
@@ -218,6 +234,38 @@ func (c *Cache) bgFetchAll() {
 		}
 		retry = 0 // reset counter on success or after giving up on bad chunk
 		part++
+	}
+}
+
+// Check data integrity in background indefinitely
+func (c *Cache) bgIntegrity(checksum verity.Verity) {
+	// Delay before the first scrub
+	sleep := time.After(time.Hour + rand.N(10*time.Minute))
+
+	// Delay before each consecutive scrub after that
+	delayBetweenScrubs := 3*time.Hour + rand.N(10*time.Minute)
+
+	log := logger.FromContext(c.ctx)
+	var part chunk
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case <-sleep:
+		}
+		offset, size := c.chunk.Offset(part)
+		err := checksum.Verify(c, offset, size)
+		if err != nil {
+			log.Error("integrity verification failed", "chunk", part, "error", err)
+			c.chunk.Lost(part)
+		}
+		var ok bool
+		part, ok = c.chunk.After(part)
+		if !ok {
+			// No more chunks to check, wait for a while and start from the beginning
+			part = 0
+			sleep = time.After(delayBetweenScrubs)
+		}
 	}
 }
 

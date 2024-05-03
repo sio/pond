@@ -23,6 +23,11 @@ func Insert(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, loggerContextKey, logger)
 }
 
+// Return a copy of the context that contains logger with given attributes
+func With(ctx context.Context, keyval ...any) context.Context {
+	return Insert(ctx, FromContext(ctx).With(keyval...))
+}
+
 type contextKey struct{}
 
 var loggerContextKey contextKey
