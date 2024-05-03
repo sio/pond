@@ -100,7 +100,7 @@ func (s *Server) ListenShutdown(sig ...os.Signal) {
 		select {
 		case interrupt := <-ch:
 			log := logger.FromContext(s.ctxSoft)
-			log.Info("initiating graceful shutdown", "interrupt", interrupt)
+			log.Info("initiating graceful shutdown", "signal", interrupt)
 			s.Shutdown()
 			return
 		case <-s.ctxStrict.Done():
