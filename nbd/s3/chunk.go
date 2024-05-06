@@ -100,9 +100,9 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 		log.Warn("chunk map size validation failed, dropping cache", "chunk_size", header.ChunkSize, "total_size", header.TotalSize)
 		return c, nil
 	}
-	const safeChunkByteCeiling = 10 << 20 // (10<<20) of (1<<20) chunks == 10TB of data, we'll never encounter that much
+	const safeChunkByteCeiling = (10 << 20) / 8 // (10<<20) of (1<<20) chunks == 10TB of data, we'll never encounter that much
 	chunkByteCount := stat.Size() - int64(binary.Size(header))
-	if chunkByteCount > int64(size/chunkSize) || chunkByteCount > safeChunkByteCeiling {
+	if chunkByteCount > int64(size/chunkSize)/8+1 || chunkByteCount > safeChunkByteCeiling {
 		return nil, fmt.Errorf("chunk map too large: %dMB (%d bytes)", stat.Size()<<20, stat.Size())
 	}
 	raw, err := io.ReadAll(file)
