@@ -142,6 +142,10 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 // even if caller was cancelled it is still useful to finish caching the current
 // chunk for future use.
 func (c *Cache) fetch(part chunk, background bool) (err error) {
+	offset, size := c.chunk.Offset(part)
+	if size == 0 {
+		return nil
+	}
 	wait, done := c.chunk.Check(part)
 	if done {
 		return nil
@@ -177,7 +181,6 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 		c.atime.Store(time.Now())
 	}
 
-	offset, size := c.chunk.Offset(part)
 	remote, err := c.remote.Reader(ctx, offset, int64(size))
 	if err != nil {
 		return err

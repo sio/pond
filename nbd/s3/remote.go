@@ -75,13 +75,14 @@ func (m *minioRemote) Close() error {
 }
 
 func (m *minioRemote) Reader(ctx context.Context, offset, length int64) (io.ReadCloser, error) {
-	if offset > m.size {
-		return nil, fmt.Errorf("attempting to read past the end of the object (%d > %d)", offset, m.size)
+	if offset > m.size || length <= 0 || offset < 0 {
+		return nullReader{}, nil
 	}
 	end := offset + length - 1
 	if end > m.size {
 		end = m.size
 	}
+
 	get := minio.GetObjectOptions{}
 	err := get.SetRange(offset, end)
 	if err != nil {
@@ -92,4 +93,14 @@ func (m *minioRemote) Reader(ctx context.Context, offset, length int64) (io.Read
 		return nil, fmt.Errorf("get object: %w", err)
 	}
 	return object, nil
+}
+
+type nullReader struct{}
+
+func (r nullReader) Read(p []byte) (int, error) {
+	return 0, io.EOF
+}
+
+func (r nullReader) Close() error {
+	return nil
 }
