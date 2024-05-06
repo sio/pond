@@ -146,7 +146,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 	log := logger.FromContext(s.ctxSoft)
 	err := s.serveNBD(conn)
 	if err != nil {
-		log.Info("disconnected on failure", "client", client, "error", err)
+		log.Error("disconnected on failure", "client", client, "error", err)
 		return
 	}
 	log.Info("disconnected on success", "client", client)
