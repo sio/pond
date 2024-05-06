@@ -22,6 +22,15 @@ type remoteInterface interface {
 }
 
 func openMinioRemote(endpoint, access, secret, bucket, object string) (remoteInterface, error) {
+	if endpoint == "" {
+		return nil, fmt.Errorf("empty endpoint URL")
+	}
+	if bucket == "" {
+		return nil, fmt.Errorf("empty bucket name")
+	}
+	if object == "" {
+		return nil, fmt.Errorf("empty object name")
+	}
 	remote, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -38,13 +47,13 @@ func openMinioRemote(endpoint, access, secret, bucket, object string) (remoteInt
 		Secure: useTLS,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("s3 client: %w", err)
+		return nil, err
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*10))
 	defer cancel()
 	stat, err := m.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("stat: %w", err)
+		return nil, err
 	}
 	m.size = stat.Size
 	m.bucket, m.object = bucket, object
