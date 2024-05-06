@@ -74,6 +74,8 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 		running: make(map[chunk]chan struct{}),
 	}
 
+	log := logger.FromContext(context.TODO()).With("path", path)
+
 	var header chunkMapExportHeader
 	err = binary.Read(file, binary.BigEndian, &header)
 	if err != nil {
@@ -86,13 +88,15 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 	if len(version) < 9 || version[:9] != chunkVersion[:9] {
 		return nil, fmt.Errorf("invalid chunk map version: %s", version)
 	}
-	if version != chunkVersion {
+	if version[:len(chunkVersion)] != chunkVersion {
 		// If we receive chunk map with incompatible header, act as if we have
 		// no cached data at all
+		log.Warn("chunk map version validation failed, dropping cache", "version", version)
 		return c, nil // TODO: add backward compaitibility with previous chunkMap formats
 	}
 	if header.ChunkSize != chunkSize || header.TotalSize != c.size {
 		// Drop cache on any irregularities
+		log.Warn("chunk map size validation failed, dropping cache", "chunk_size", header.ChunkSize, "total_size", header.TotalSize)
 		return c, nil
 	}
 	const safeChunkByteCeiling = 10 << 20 // (10<<20) of (1<<20) chunks == 10TB of data, we'll never encounter that much
