@@ -85,7 +85,8 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 		return nil, fmt.Errorf("chunk map header: %w", err)
 	}
 	version := string(header.Version[:])
-	if len(version) < 9 || version[:9] != chunkVersion[:9] {
+	const prefixLen = 9
+	if len(version) < prefixLen || version[:prefixLen] != chunkVersion[:prefixLen] {
 		return nil, fmt.Errorf("invalid chunk map version: %s", version)
 	}
 	if version[:len(chunkVersion)] != chunkVersion {
