@@ -1,26 +1,38 @@
 package main
 
 import (
-	"context"
-	"log"
+	"encoding/json"
+	"fmt"
 	"os"
 
-	"github.com/sio/pond/nbd/server"
+	"github.com/sio/pond/nbd/daemon"
 )
 
+const config = `
+{
+	"s3": {
+		"endpoint": "http://127.0.0.55:55555",
+		"bucket": "testdata",
+		"access": "access",
+		"secret": "secret123"
+	},
+	"cache": {"dir": "./cache"},
+	"listen": [
+		{"network": "tcp", "address": "127.0.0.189:10809"}
+	]
+}
+`
+
 func main() {
-	exe, err := os.Executable()
+	var nbd daemon.Daemon
+	err := json.Unmarshal([]byte(config), &nbd)
 	if err != nil {
-		log.Fatal(err)
+		panic("default config: " + err.Error())
 	}
-	log.Println(exe)
-	s := server.New(context.Background(), func(name string) (server.Backend, error) {
-		log.Printf("exportFunc: client requested export name: %q\n", name)
-		return os.Open("Makefile")
-	})
-	go s.ListenShutdown()
-	e := s.Listen("tcp", "127.0.0.189:10809")
-	if e != nil {
-		log.Fatalf("Exit: %v", e)
+
+	err = nbd.Run()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }

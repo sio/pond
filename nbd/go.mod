@@ -8,6 +8,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.69
 	github.com/testcontainers/testcontainers-go v0.30.0
 	golang.org/x/crypto v0.19.0
+	golang.org/x/sync v0.3.0
 )
 
 require (
