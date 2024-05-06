@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 
@@ -105,6 +106,9 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 			Len   uint32
 		}
 		err := receive(conn, &option)
+		if errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("client terminated connection")
+		}
 		if err != nil {
 			return nil, fmt.Errorf("receiving option: %w", err)
 		}
@@ -134,11 +138,11 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 			}
 			backend, err := negotiateBackend(conn, export, option.Len)
 			if err != nil {
-				err = reply(option.Type, NBD_REP_ERR_UNKNOWN, nil)
-				if err != nil {
-					return nil, err
+				ereply := reply(option.Type, NBD_REP_ERR_UNKNOWN, []byte("requested export is not available\x00"))
+				if ereply != nil {
+					return nil, ereply
 				}
-				continue
+				return nil, err
 			}
 
 			// Ignore all information requests sent by client,
@@ -174,7 +178,7 @@ func negotiate(ctx context.Context, conn io.ReadWriter, export func(name string)
 			}
 
 		case NBD_OPT_EXPORT_NAME: // not supported; drop connection (violates NBD protocol spec)
-			_ = reply(option.Type, NBD_REP_ERR_POLICY, []byte("this server requires fixed newstyle negotiation"))
+			_ = reply(option.Type, NBD_REP_ERR_POLICY, []byte("this server requires fixed newstyle negotiation\x00"))
 			return nil, fmt.Errorf("client attempted non-fixed newstyle negotiation")
 
 		case NBD_OPT_ABORT:
