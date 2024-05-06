@@ -92,7 +92,7 @@ func openChunkMap(path string, size int64) (*chunkMap, error) {
 	if version[:len(chunkVersion)] != chunkVersion {
 		// If we receive chunk map with incompatible header, act as if we have
 		// no cached data at all
-		log.Warn("chunk map version validation failed, dropping cache", "version", version)
+		log.Warn("chunk map version incompatible, dropping cache", "version", version)
 		return c, nil // TODO: add backward compaitibility with previous chunkMap formats
 	}
 	if header.ChunkSize != chunkSize || header.TotalSize != c.size {
