@@ -234,7 +234,7 @@ func (m *chunkMap) AutoSave(ctx context.Context) {
 		err := m.Save()
 		if err != nil {
 			log := logger.FromContext(ctx)
-			log.Warn("chunkmap autosave failed", "error", err)
+			log.Warn("chunkmap autosave failed", "path", m.path, "error", err)
 		}
 	}
 }
