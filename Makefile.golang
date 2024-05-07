@@ -135,7 +135,7 @@ debug-core: $(DELVE)  ## dump and debug process memory
 	$(DELVE) core "$(EXE)" "$(CORE)"
 
 .PHONY: debug-build
-debug-build: ## build binaries without optimization
+debug-build:  ## build binaries without optimization
 	$(MAKE) build GOBUILD_ARGS=
 
 CLOC=$(GOPATH)/bin/gocloc$(GOEXE)
