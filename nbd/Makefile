@@ -15,3 +15,7 @@ s3: ## Development S3 endpoint. No security!
 		-v "$$PWD/verity/testdata:/data/testdata:ro" \
 		-it "quay.io/minio/minio:RELEASE.2022-05-26T05-48-41Z" \
 		gateway nas /data
+
+run-nbd: cache
+cache:
+	mkdir -p "$@"
