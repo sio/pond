@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/sio/pond/nbd/daemon"
+	"github.com/sio/pond/nbd/logger"
 )
 
 const config = `
@@ -24,6 +25,8 @@ const config = `
 `
 
 func main() {
+	logger.Setup()
+
 	var nbd daemon.Daemon
 	err := json.Unmarshal([]byte(config), &nbd)
 	if err != nil {

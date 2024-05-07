@@ -4,6 +4,9 @@ package logger
 import (
 	"context"
 	"log/slog"
+	"os"
+	"sync"
+	"time"
 )
 
 type Logger = *slog.Logger
@@ -32,3 +35,31 @@ func With(ctx context.Context, keyval ...any) (context.Context, Logger) {
 type contextKey struct{}
 
 var loggerContextKey contextKey
+
+// Configure top level logger
+func Setup() {
+	if !setup.TryLock() {
+		return // setup was already called
+	}
+
+	const timestamp = true // TODO: automatically detect systemd and disable timestamps
+	replace := func(groups []string, attr slog.Attr) slog.Attr {
+		if attr.Key == slog.TimeKey && groups == nil {
+			if !timestamp {
+				return slog.Attr{} // empty Attr will be omitted during output
+			}
+			t, ok := attr.Value.Any().(time.Time)
+			if !ok {
+				return attr
+			}
+			return slog.String(slog.TimeKey, t.UTC().Format(time.RFC3339))
+		}
+		return attr
+	}
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: replace,
+	})
+	slog.SetDefault(slog.New(handler))
+}
+
+var setup sync.Mutex
