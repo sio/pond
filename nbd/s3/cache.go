@@ -140,7 +140,7 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 			offset, size := c.chunk.Offset(first)
 			if size != 0 {
 				log := logger.FromContext(ctx)
-				log.Error("local read error", "error", err, "offset", offset, "size", size)
+				log.Error("reading from local cache", "error", err, "offset", offset, "size", size)
 			}
 		}
 		return n, err
