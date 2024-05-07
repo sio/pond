@@ -47,13 +47,13 @@ func openMinioRemote(endpoint, access, secret, bucket, object string) (remoteInt
 		Secure: useTLS,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*10))
 	defer cancel()
 	stat, err := m.client.StatObject(ctx, bucket, object, minio.StatObjectOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s/%s/%s: %w", endpoint, bucket, object, err)
 	}
 	m.size = stat.Size
 	m.bucket, m.object = bucket, object
