@@ -176,6 +176,7 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 		}
 		return err
 	}
+	defer Release(c.queue, globalConnectionQueue)
 
 	if !background {
 		c.atime.Store(time.Now())

@@ -102,9 +102,12 @@ func (q *Queue) AcquireLowPriority(ctx context.Context) error {
 }
 
 func Acquire(ctx context.Context, queue ...*Queue) error {
-	for _, q := range queue {
+	for index, q := range queue {
 		err := q.Acquire(ctx)
 		if err != nil {
+			for i := 0; i < index; i++ {
+				_ = queue[i].Release()
+			}
 			return err
 		}
 	}
@@ -112,11 +115,20 @@ func Acquire(ctx context.Context, queue ...*Queue) error {
 }
 
 func AcquireLowPriority(ctx context.Context, queue ...*Queue) error {
-	for _, q := range queue {
+	for index, q := range queue {
 		err := q.AcquireLowPriority(ctx)
 		if err != nil {
+			for i := 0; i < index; i++ {
+				_ = queue[i].Release()
+			}
 			return err
 		}
 	}
 	return nil
+}
+
+func Release(queue ...*Queue) {
+	for _, q := range queue {
+		_ = q.Release()
+	}
 }
