@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"sync"
 
@@ -33,7 +33,7 @@ type Daemon struct {
 
 func (d *Daemon) Run() error {
 	ctx, cancel := context.WithCancelCause(context.Background())
-	defer cancel(errors.New("shutting down the daemon"))
+	defer cancel(server.NBD_ESHUTDOWN)
 	log := logger.FromContext(ctx)
 
 	// Exclusive lock on local cache directory
@@ -63,7 +63,7 @@ func (d *Daemon) Run() error {
 
 		cache, found := volume[name]
 		if found {
-			return cache, nil
+			return &dontClose{r: cache}, nil
 		}
 		cache, err := s3.Open(
 			d.S3.Endpoint,
@@ -78,7 +78,7 @@ func (d *Daemon) Run() error {
 		}
 		// TODO: clean up old cache artifacts when running low on disk space
 		volume[name] = cache
-		return cache, nil
+		return &dontClose{r: cache}, nil
 	}
 
 	// Launch NBD server
@@ -95,5 +95,26 @@ func (d *Daemon) Run() error {
 			return err
 		})
 	}
-	return group.Wait()
+	err = group.Wait()
+	for name, cache := range volume {
+		closer, ok := cache.(io.Closer)
+		if !ok {
+			continue
+		}
+		e := closer.Close()
+		if e != nil {
+			log.Error("closing cache failed", "name", name, "error", e)
+		}
+	}
+	return err
+}
+
+// Hide Close() method from type assertion to avoid accidental closing of
+// memoized cache objects
+type dontClose struct {
+	r io.ReaderAt
+}
+
+func (r *dontClose) ReadAt(p []byte, offset int64) (int, error) {
+	return r.r.ReadAt(p, offset)
 }
