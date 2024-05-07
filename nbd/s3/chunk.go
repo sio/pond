@@ -47,7 +47,7 @@ func (m *chunkMap) Offset(c chunk) (offset int64, size int) {
 	size = chunkSize
 	offset = int64(size) * int64(c)
 	total := int64(m.size)
-	if offset > total {
+	if offset > total || offset < 0 {
 		return 0, 0
 	}
 	if offset+int64(size) > total {
@@ -150,6 +150,11 @@ func (m *chunkMap) Check(c chunk) (wait <-chan struct{}, done bool) {
 }
 
 func (m *chunkMap) check(c chunk) (ch chan struct{}, done bool) {
+	_, size := m.Offset(c)
+	if size == 0 {
+		return closed, true
+	}
+
 	m.bitmapMu.RLock()
 	defer m.bitmapMu.RUnlock()
 
