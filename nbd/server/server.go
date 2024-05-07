@@ -142,30 +142,33 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	addr := conn.RemoteAddr()
 	client := fmt.Sprintf("%s://%s", addr.Network(), addr.String())
+	ctx := logger.With(s.ctxSoft, "client", client)
+	log := logger.FromContext(ctx)
 
-	log := logger.FromContext(s.ctxSoft)
-	err := s.serveNBD(conn)
+	err := s.serveNBD(ctx, conn)
 	if err != nil {
-		log.Error("disconnected on failure", "client", client, "error", err)
+		log.Error("disconnected on failure", "error", err)
 		return
 	}
-	log.Info("disconnected on success", "client", client)
+	log.Info("disconnected on success")
 }
 
 // Speak NBD protocol over a single TCP/TLS connection
-func (s *Server) serveNBD(conn net.Conn) error {
+func (s *Server) serveNBD(ctx context.Context, conn net.Conn) error {
 	err := handshake(conn)
 	if err != nil {
 		return fmt.Errorf("handshake: %w", err)
 	}
-	backend, err := negotiate(s.ctxSoft, conn, s.export)
+	backend, err := negotiate(ctx, conn, s.export)
 	if err != nil {
 		return fmt.Errorf("negotiation: %w", err)
 	}
 	if b, ok := backend.(io.Closer); ok {
 		defer func() { _ = b.Close() }()
 	}
-	err = transmission(s.ctxSoft, conn, backend)
+	log := logger.FromContext(ctx)
+	log.Info("new client connected")
+	err = transmission(ctx, conn, backend)
 	if err != nil {
 		return fmt.Errorf("transmission: %w", err)
 	}
