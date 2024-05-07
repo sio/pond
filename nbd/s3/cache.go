@@ -111,7 +111,9 @@ func (c *Cache) Close() error {
 }
 
 func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
-	ctx, cancel := context.WithCancelCause(c.ctx)
+	ctx, cleanup := context.WithDeadline(c.ctx, time.Now().Add(1*time.Minute))
+	defer cleanup()
+	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(errNotRelevant)
 
 	// Schedule relevant chunks to be fetched
