@@ -127,12 +127,16 @@ debug delve: $(DELVE)  ## start interactive debugger
 
 .PHONY: debug-core
 debug-core: CORE?=core.$(PID)
-debug-core: EXE?=$(shell readlink /proc/$(PID)/exe)
+debug-core: EXE=$(shell readlink /proc/$(PID)/exe)
 debug-core: $(DELVE)  ## dump and debug process memory
 	@test "$(CORE)" != "core." || { echo 'Variable not defined: PID'; exit 1; }
 	@test -n "$(EXE)" || { echo 'Variable not defined: EXE'; exit 1; }
 	@test -f "$(CORE)" || gcore -o core $(PID)
 	$(DELVE) core "$(EXE)" "$(CORE)"
+
+.PHONY: debug-build
+debug-build: ## build binaries without optimization
+	$(MAKE) build GOBUILD_ARGS=
 
 CLOC=$(GOPATH)/bin/gocloc$(GOEXE)
 $(CLOC):
