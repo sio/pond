@@ -142,8 +142,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 
 	addr := conn.RemoteAddr()
 	client := fmt.Sprintf("%s://%s", addr.Network(), addr.String())
-	ctx := logger.With(s.ctxSoft, "client", client)
-	log := logger.FromContext(ctx)
+	ctx, log := logger.With(s.ctxSoft, "client", client)
 
 	err := s.serveNBD(ctx, conn)
 	if err != nil {

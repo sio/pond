@@ -44,7 +44,7 @@ type Cache struct {
 func Open(endpoint, access, secret, bucket, object, localdir string) (c *Cache, err error) {
 	c = new(Cache)
 	c.ctx, c.cancel = context.WithCancelCause(context.TODO())
-	c.ctx = logger.With(c.ctx, "s3", fmt.Sprintf("%s/%s/%s", endpoint, bucket, object))
+	c.ctx, _ = logger.With(c.ctx, "s3", fmt.Sprintf("%s/%s/%s", endpoint, bucket, object))
 	c.goro = new(sync.WaitGroup)
 	c.queue = NewQueue(c.ctx, connLimitPerObject)
 	c.atime.Store(time.Now())
