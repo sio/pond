@@ -117,7 +117,8 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 	defer cancel(errNotRelevant)
 
 	// Schedule relevant chunks to be fetched
-	part := chunk(offset / chunkSize)
+	first := chunk(offset / chunkSize)
+	part := first
 	for remain := int64(len(p)); remain > 0; remain -= chunkSize {
 		c.goro.Add(1)
 		go func(part chunk) {
@@ -131,10 +132,18 @@ func (c *Cache) ReadAt(p []byte, offset int64) (n int, err error) {
 	}
 
 	// Return data from the first relevant chunk
-	ready, _ := c.chunk.Check(chunk(offset / chunkSize))
+	ready, _ := c.chunk.Check(first)
 	select {
 	case <-ready:
-		return c.local.ReadAt(p[:min(len(p), chunkSize)], offset)
+		n, err := c.local.ReadAt(p[:min(len(p), chunkSize)], offset)
+		if err != nil && !errors.Is(err, io.EOF) {
+			offset, size := c.chunk.Offset(first)
+			if size != 0 {
+				log := logger.FromContext(ctx)
+				log.Error("local read error", "error", err, "offset", offset, "size", size)
+			}
+		}
+		return n, err
 	case <-ctx.Done():
 		return 0, context.Cause(ctx)
 	}
@@ -199,11 +208,13 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 	defer buffer.Put(buf)
 
 	n, err := io.CopyBuffer(io.NewOffsetWriter(c.local, offset), remote, buf[:cap(buf)])
-	if err != nil {
-		return err
+	if err == nil && n != int64(size) {
+		err = fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size)
 	}
-	if n != int64(size) {
-		return fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size)
+	if err != nil {
+		log := logger.FromContext(ctx)
+		log.Error("fetching from remote storage to local cache", "error", err, "offset", offset, "size", size)
+		return err
 	}
 	c.chunk.Done(part)
 	return nil
