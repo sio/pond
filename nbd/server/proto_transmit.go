@@ -22,7 +22,7 @@ func transmission(ctx context.Context, conn io.ReadWriter, backend Backend) erro
 	sendError := func(cookie clientCookie, err nbdError) error {
 		write.Lock()
 		defer write.Unlock()
-		return send(conn, replyHeader{
+		return send(conn, replyHeader{ // TODO: look for short TCP writes (Nagle algorithm is disabled in Go by default) and batch them where it makes sense
 			Magic:  NBD_SIMPLE_REPLY_MAGIC,
 			Error:  err,
 			Cookie: cookie,
