@@ -52,6 +52,12 @@ type MetalID struct {
 	sensitiveFunc func(d []byte) string
 }
 
+// TODO: Use TPM (if present) to generate deterministic machine identity key instead of our bespoke algorithm (see below)
+// Relevant links:
+//  * https://ericchiang.github.io/post/tpm-keys/
+//  * https://dev.to/nandhithakamal/tpm-part-1-4emf
+//  * https://github.com/tpm2dev/tpm.dev.tutorials/blob/master/Intro/README.md
+
 // Feed data to fingerprint function
 func (id *MetalID) write(p []byte) (n int, err error) {
 	n, err = id.hash.Write(p)
