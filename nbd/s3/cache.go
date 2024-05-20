@@ -212,8 +212,10 @@ func (c *Cache) fetch(part chunk, background bool) (err error) {
 		err = fmt.Errorf("%w: written %d bytes, want %d bytes", io.ErrShortWrite, n, size)
 	}
 	if err != nil {
-		log := logger.FromContext(ctx)
-		log.Error("fetching from remote storage to local cache", "error", err, "offset", offset, "size", size)
+		if !errors.Is(err, context.Canceled) {
+			log := logger.FromContext(ctx)
+			log.Error("fetching from remote storage to local cache", "error", err, "offset", offset, "size", size)
+		}
 		return err
 	}
 	c.chunk.Done(part)
