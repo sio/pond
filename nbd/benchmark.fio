@@ -1,0 +1,52 @@
+# MEASURE READ PERFORMANCE WITH FIO
+#
+# Execute this benchmark:
+#   $ sudo fio --filename=/dev/mapper/$NAME benchmark.fio
+#
+# Executing against raw /dev/nbd0 will error out on out-of-bounds reads,
+# so we need to initialize dm-verity first:
+#   $ sudo veritysetup open /dev/nbd0 $NAME /dev/nbd0 $HASH --hash-offset=$OFFSET
+#
+# On my machine tests show satisfactory performance without any special
+# optimization. When not limited by underlying storage and network (s3 server
+# on the same machine, s3 object buffered to RAM), our nbd server is able to
+# handle up to 30k+ IOPS (random-4k) or up to 3+ Gbps (sequential-1M). Worst
+# case performance never dips below 1Gbps baseline, which is pretty impressive.
+# This means that in real usage scenarios our bespoke nbd server is unlikely to
+# become a bottleneck.
+
+[global]
+runtime=1m
+ramp_time=5s
+time_based
+stonewall
+buffered=0
+ioengine=libaio
+iodepth=32
+numjobs=1
+group_reporting=1
+allow_file_create=0
+
+[random-4k]
+readwrite=randread
+bs=4k
+
+[random-256k]
+readwrite=randread
+bs=256k
+
+[random-1M]
+readwrite=randread
+bs=1M
+
+[sequential-4k]
+readwrite=read
+bs=4k
+
+[sequential-256k]
+readwrite=read
+bs=256k
+
+[sequential-1M]
+readwrite=read
+bs=1M
