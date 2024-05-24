@@ -122,7 +122,7 @@ func (sb *veritySuperblock) validate() error {
 	if sb.Type != 1 {
 		return fmt.Errorf("unsupported superblock type: %d (%#x)", sb.Type, sb.Type)
 	}
-	var hashSize uint16 = 0xffff
+	var hashSize uint16
 	switch string(sb.Algorithm[:bytes.IndexByte(sb.Algorithm[:], 0)]) {
 	case "sha256":
 		hashSize = sha256.Size
