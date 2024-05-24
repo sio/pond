@@ -69,6 +69,11 @@ update:  ## update Go packages this project depends on
 	$(GO) get -u all
 	@touch go.mod
 
+.PHONY: update-heal
+update-heal:  ## update Go packages with some auto healing (if normal update fails)
+	awk '/^\t[^ ]+ [^ ]+$$/ { print $$1; }' go.mod | xargs -t $(GO) get -u
+	$(MAKE) update
+
 .PHONY: ci
 ci:  ## run continuous integration checks
 ci: lint test bench-quick build
