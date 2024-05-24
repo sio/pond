@@ -97,24 +97,50 @@ bench:  ## run benchmarks
 bench-quick:  ## run a single iteration of each benchmark
 	$(GO) test $(EVERYTHING) -bench=. -benchmem -benchtime=1x -run='^#'
 
-STATICCHECK=$(GOPATH)/bin/staticcheck$(GOEXE)
+# Find OS provided executables
+ifeq (ok,$(shell test -e /dev/null 2>&1 && echo ok))
+null_stderr=2>/dev/null
+else
+null_stderr=2>NUL
+endif
+command=$(strip $(shell command -v $(1) $(null_stderr)))
+
+# Calculate tool path and assign the most likely result to variable
+#	- Use path specified by variable (if any)
+#	- Search $PATH for OS provided tools
+#	- Fall back to ~/go/bin/$command (do not check if it exists)
+define tool
+$(1)?=$$(call command,$(2))
+ifeq (,$$($(1)))
+$(1)=$(GOPATH)/bin/$(2)$(GOEXE)
+endif
+endef
+
+$(eval $(call tool,STATICCHECK,staticcheck))
 $(STATICCHECK):
 	$(GO) install honnef.co/go/tools/cmd/staticcheck@latest
 
-ERRCHECK=$(GOPATH)/bin/errcheck$(GOEXE)
+$(eval $(call tool,ERRCHECK,errcheck))
 $(ERRCHECK):
 	$(GO) install github.com/kisielk/errcheck@latest
 
+$(eval $(call tool,GOLINT,golangci-lint))
+GOLINT:=$(strip $(wildcard $(GOLINT)))
+
 .PHONY: lint
-lint: $(STATICCHECK) $(ERRCHECK)
 lint:  ## run linters
 	"$(GOROOT)/bin/gofmt" -d .
 	@test -z "$$("$(GOROOT)/bin/gofmt" -l .)"
+ifneq (,$(GOLINT))
+	$(GOLINT) run $(EVERYTHING)
+else
 	$(GO) vet $(EVERYTHING)
 	$(STATICCHECK) $(EVERYTHING)
 	$(ERRCHECK) $(EVERYTHING)
+lint: $(STATICCHECK) $(ERRCHECK)
+endif
 
-DELVE=$(GOPATH)/bin/dlv$(GOEXE)
+$(eval $(call tool,DELVE,dlv))
 $(DELVE):
 	$(GO) install github.com/go-delve/delve/cmd/dlv@latest
 
@@ -138,7 +164,7 @@ debug-core: $(DELVE)  ## dump and debug process memory
 debug-build:  ## build binaries without optimization
 	$(MAKE) build GOBUILD_ARGS=
 
-CLOC=$(GOPATH)/bin/gocloc$(GOEXE)
+$(eval $(call tool,CLOC,gocloc))
 $(CLOC):
 	$(GO) install github.com/hhatto/gocloc/cmd/gocloc@latest
 

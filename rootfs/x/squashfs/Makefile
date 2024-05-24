@@ -81,4 +81,4 @@ apt:
 
 
 .PHONY: ci update upx
-ci update upx:  ## noop, required for `make ci` at repo level
+ci update upx lint:  ## noop, required for `make ci` at repo level
