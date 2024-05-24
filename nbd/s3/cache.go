@@ -262,7 +262,9 @@ func (c *Cache) bgIntegrity(checksum verity.Verity) {
 	sleep := time.After(time.Hour + rand.N(10*time.Minute))
 
 	// Delay before each consecutive scrub after that
-	delayBetweenScrubs := 3*time.Hour + rand.N(10*time.Minute)
+	delayBetweenScrubs := func() time.Duration {
+		return 3*time.Hour + rand.N(10*time.Minute)
+	}
 
 	log := logger.FromContext(c.ctx)
 	var part chunk
@@ -283,7 +285,7 @@ func (c *Cache) bgIntegrity(checksum verity.Verity) {
 		if !ok {
 			// No more chunks to check, wait for a while and start from the beginning
 			part = 0
-			sleep = time.After(delayBetweenScrubs)
+			sleep = time.After(delayBetweenScrubs())
 		}
 	}
 }
