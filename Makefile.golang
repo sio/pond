@@ -67,6 +67,7 @@ go.sum: go.mod
 .PHONY: update
 update:  ## update Go packages this project depends on
 	$(GO) get -u all
+	$(GO) mod tidy
 	@touch go.mod
 
 .PHONY: update-heal
