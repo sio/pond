@@ -194,6 +194,7 @@ func (m *chunkMap) Save() error {
 		return err
 	}
 	defer func() { _ = os.Remove(temp.Name()) }()
+	defer func() { _ = temp.Close() }()
 
 	m.bitmapMu.RLock()
 	defer m.bitmapMu.RUnlock()
@@ -213,6 +214,14 @@ func (m *chunkMap) Save() error {
 	_, err = temp.Write(m.bitmap.Bytes())
 	if err != nil {
 		return fmt.Errorf("writing bitmap: %w", err)
+	}
+	err = temp.Sync()
+	if err != nil {
+		return fmt.Errorf("writing to disk: %w", err)
+	}
+	err = temp.Close()
+	if err != nil {
+		return fmt.Errorf("closing temp file: %w", err)
 	}
 	err = os.Rename(temp.Name(), m.path)
 	if err != nil {
