@@ -48,6 +48,12 @@ Error output:
 }
 ```
 
+Convenient API for fetching secret to file:
+
+```
+$ scp secretd.example.com:path/to/secret local/file.txt
+```
+
 
 ### Repo maintenance
 
