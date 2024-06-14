@@ -28,6 +28,11 @@ ifndef CGO_ENABLED
 export CGO_ENABLED=0
 endif
 
+ifneq (,$(DEBUG))
+BIN_SUFFIX:=$(BIN_SUFFIX).debug
+GOBUILD_ARGS:=
+endif
+
 .PHONY: build
 build: $(EXE)  ## compile all binaries
 
@@ -168,7 +173,7 @@ debug-core: $(DELVE)  ## dump and debug process memory
 
 .PHONY: debug-build
 debug-build:  ## build binaries without optimization
-	$(MAKE) build GOBUILD_ARGS=
+	$(MAKE) build DEBUG=y
 
 $(eval $(call tool,CLOC,gocloc))
 $(CLOC):
